@@ -43,6 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       // Simulate async auth
       await new Promise((r) => setTimeout(r, 500));
+      // NOTE: This is a mock authentication for demo purposes only.
+      // In production, passwords should be hashed and compared server-side.
       const found = mockUsers.find(
         (u) => u.email === email && u.password === password
       );
