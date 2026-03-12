@@ -35,29 +35,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = (dni: string, password?: string) => {
     setIsLoading(true);
-    
+
     // Simulate API call
     setTimeout(() => {
-        const foundUser = MOCK_USERS.find(u => u.dni === dni);
+      const foundUser = MOCK_USERS.find((u) => u.dni === dni);
 
-        if (!foundUser) {
-            toast.error("DNI no encontrado");
-            setIsLoading(false);
-            return;
-        }
-
-        // Simple password check (in a real app, this would be hashed)
-        if (foundUser.password && foundUser.password !== password) {
-            toast.error("Contraseña incorrecta");
-            setIsLoading(false);
-            return;
-        }
-
-        setUser(foundUser);
-        localStorage.setItem("brigadapp_user", JSON.stringify(foundUser));
-        toast.success(`Bienvenido, ${foundUser.name}`);
-        router.push("/dashboard");
+      if (!foundUser) {
+        toast.error("DNI no encontrado");
         setIsLoading(false);
+        return;
+      }
+
+      // Simple password check (in a real app, this would be hashed)
+      if (foundUser.password && foundUser.password !== password) {
+        toast.error("Contraseña incorrecta");
+        setIsLoading(false);
+        return;
+      }
+
+      setUser(foundUser);
+      localStorage.setItem("brigadapp_user", JSON.stringify(foundUser));
+      toast.success(`Bienvenido, ${foundUser.name}`);
+      router.push("/dashboard");
+      setIsLoading(false);
     }, 800);
   };
 
