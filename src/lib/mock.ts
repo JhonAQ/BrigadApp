@@ -10,6 +10,7 @@ export type UserRole =
 export interface User {
   id: string;
   name: string;
+  dni: string;
   role: UserRole;
   password?: string; // Simplification for mock login
 }
@@ -35,21 +36,27 @@ export interface Incident {
   status: 'PENDIENTE' | 'ATENDIDA';
   reporterId: string;
   psychNotes?: string;
+  zone?: string;
 }
 
+// Updated Mock Users with DNIS
 export const MOCK_USERS: User[] = [
-  { id: 'u1', name: 'Prof. Juan Pérez', role: 'PROFESSOR_ADMIN', password: 'admin' },
-  { id: 'u2', name: 'Brig. Gen. Ana López', role: 'GENERAL_BRIGADIER', password: 'gen' },
-  { id: 'u3', name: 'Sub-Brig. Marcos Díaz', role: 'SUB_BRIGADIER', password: 'sub' },
-  { id: 'u4', name: 'Brig. Aula Sofia Ruiz', role: 'PATROL_BRIGADIER', password: 'patrol' },
-  { id: 'u5', name: 'Lic. Maria Gomez', role: 'PSYCHOLOGIST', password: 'psych' },
+  { id: 'u1', dni: '00000001', name: 'Prof. Juan Pérez', role: 'PROFESSOR_ADMIN', password: 'admin' },
+  { id: 'u2', dni: '10000001', name: 'Brig. Gen. Ana López', role: 'GENERAL_BRIGADIER', password: 'gen' },
+  { id: 'u3', dni: '20000001', name: 'Sub-Brig. Marcos Díaz', role: 'SUB_BRIGADIER', password: 'sub' },
+  { id: 'u4', dni: '30000001', name: 'Brig. Aula Sofia Ruiz', role: 'PATROL_BRIGADIER', password: 'patrol' },
+  { id: 'u5', dni: '40000001', name: 'Lic. Maria Gomez', role: 'PSYCHOLOGIST', password: 'psych' },
 ];
 
 export const MOCK_STUDENTS: Student[] = [
-  { id: 's1', dni: '10000001', firstName: 'Carlos', lastName: 'Mendez', grade: '5to', section: 'A', incidentsCount: 0 },
-  { id: 's2', dni: '10000002', firstName: 'Lucia', lastName: 'Fernandez', grade: '4to', section: 'B', incidentsCount: 2 }, // Close to warning
-  { id: 's3', dni: '10000003', firstName: 'Pedro', lastName: 'Ramirez', grade: '3ro', section: 'C', incidentsCount: 4 }, // Warning!
-  { id: 's4', dni: '10000004', firstName: 'Elena', lastName: 'Torres', grade: '5to', section: 'A', incidentsCount: 1 },
+  { id: 's1', dni: '70000001', firstName: 'Carlos', lastName: 'Mendez', grade: '5to', section: 'A', incidentsCount: 0 },
+  { id: 's2', dni: '70000002', firstName: 'Lucia', lastName: 'Fernandez', grade: '4to', section: 'B', incidentsCount: 2 },
+  { id: 's3', dni: '70000003', firstName: 'Pedro', lastName: 'Ramirez', grade: '3ro', section: 'C', incidentsCount: 4 },
+  { id: 's4', dni: '70000004', firstName: 'Elena', lastName: 'Torres', grade: '5to', section: 'A', incidentsCount: 1 },
+  { id: 's5', dni: '70000005', firstName: 'Miguel', lastName: 'Angel', grade: '1ro', section: 'A', incidentsCount: 0 },
+  { id: 's6', dni: '70000006', firstName: 'Ana', lastName: 'Maria', grade: '2do', section: 'B', incidentsCount: 3 },
+  { id: 's7', dni: '70000007', firstName: 'Jose', lastName: 'Luis', grade: '3ro', section: 'A', incidentsCount: 0 },
+  { id: 's8', dni: '70000008', firstName: 'Maria', lastName: 'Jose', grade: '4to', section: 'C', incidentsCount: 0 },
 ];
 
 export const MOCK_INCIDENTS: Incident[] = [
@@ -88,3 +95,7 @@ export const MOCK_INCIDENTS: Incident[] = [
       reporterId: 'u3'
   }
 ];
+
+// Helper to filter students
+export const getGrades = () => [...new Set(MOCK_STUDENTS.map(s => s.grade))];
+export const getSections = (grade: string) => [...new Set(MOCK_STUDENTS.filter(s => s.grade === grade).map(s => s.section))];

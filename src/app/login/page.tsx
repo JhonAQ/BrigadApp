@@ -3,92 +3,110 @@
 import { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, User as UserIcon } from 'lucide-react';
-import { MOCK_USERS, UserRole } from '@/lib/mock';
+import { ShieldCheck, User as UserIcon, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const [dni, setDni] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('GENERAL_BRIGADIER');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate API delay
-    setTimeout(() => {
-        login(selectedRole);
-    }, 500);
+    if (dni.length < 8) {
+      toast.error('El DNI debe tener 8 dÌgitos');
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+       await login(dni, password);
+       // Login success handles redirect in context
+    } catch (error) {
+       toast.error('Error al iniciar sesiÛn');
+    } finally {
+       setIsLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <div className='min-h-screen flex items-center justify-center bg-slate-50 p-4'>
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+        className='w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100/50'
       >
-        <div className="bg-slate-900 p-8 text-center">
-          <div className="mx-auto w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm">
-            <ShieldCheck className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">BrigadApp</h1>
-          <p className="text-slate-400 text-sm">Sistema de Gesti√≥n Escolar</p>
+        <div className='bg-slate-900 p-10 text-center relative overflow-hidden'>
+          <div className='absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-purple-600/20 z-0' />
+          
+          <motion.div 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className='relative z-10 mx-auto w-20 h-20 bg-indigo-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl shadow-indigo-500/30'
+          >
+            <ShieldCheck className='w-10 h-10 text-white' />
+          </motion.div>
+          
+          <h1 className='relative z-10 text-3xl font-bold text-white mb-2 tracking-tight'>BrigadApp</h1>
+          <p className='relative z-10 text-indigo-200 text-sm font-medium'>Control y GestiÛn Escolar</p>
         </div>
 
-        <div className="p-8">
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">DNI del Usuario</label>
-              <div className="relative">
-                <UserIcon className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
+        <div className='p-8 pt-10'>
+          <form onSubmit={handleLogin} className='space-y-5'>
+            <div className='space-y-1.5'>
+              <label className='text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1'>Usuario</label>
+              <div className='relative group'>
+                <UserIcon className='absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors' />
                 <input 
-                  type="text" 
-                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none transition-all"
-                  placeholder="Ingrese su DNI"
+                  type='text' 
+                  className='w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-slate-900 font-medium'
+                  placeholder='Ingrese su DNI'
                   value={dni}
                   onChange={(e) => setDni(e.target.value)}
-                  // required // Not required for mock demo
+                  maxLength={8}
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Contrase√±a</label>
-              <input 
-                type="password" 
-                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent outline-none transition-all"
-                placeholder="‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢‚Ä¢"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                // required
-              />
+            <div className='space-y-1.5'>
+              <label className='text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1'>ContraseÒa</label>
+              <div className='relative group'>
+                <Lock className='absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors' />
+                <input 
+                  type='password' 
+                  className='w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-slate-900 font-medium'
+                  placeholder='ïïïïïïïï'
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 mt-4">
-              <label className="block text-xs font-medium text-slate-500 mb-2 uppercase tracking-wide">
-                Seleccionar Rol (Solo Demo)
-              </label>
-              <select 
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm mb-4"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-              >
-                {MOCK_USERS.map(u => (
-                  <option key={u.id} value={u.role}>
-                    {u.name} - {u.role.replace('_', ' ')}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <Button type="submit" className="w-full" size="lg">
-              Iniciar Sesi√≥n
+            <Button 
+                type='submit' 
+                className='w-full h-12 text-base shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all active:scale-[0.98]' 
+                size='lg'
+                disabled={isLoading}
+            >
+              {isLoading ? (
+                  <span className='flex items-center gap-2'>
+                      <div className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin' />
+                      Iniciando...
+                  </span>
+              ) : 'Ingresar al Sistema'}
             </Button>
             
-            <p className="text-xs text-center text-slate-400 mt-4">
-              BrigadApp v1.0 &copy; 2026
-            </p>
+            <div className='text-center pt-2'>
+              <p className='text-xs text-slate-400'>
+                Credenciales Demo:<br/>
+                Admin: 00000001 / admin<br/>
+                Brigadier: 10000001 / gen
+              </p>
+            </div>
           </form>
         </div>
       </motion.div>

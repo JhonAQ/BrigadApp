@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { MOCK_USERS, MOCK_STUDENTS, UserRole } from '@/lib/mock';
 import { Button } from '@/components/ui/button';
+import { jsPDF } from 'jspdf';
 import { 
   AlertTriangle, 
   BadgeCheck, 
@@ -17,72 +18,123 @@ import { toast } from 'sonner';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'USERS' | 'STUDENTS'>('USERS');
+  const [userFilter, setUserFilter] = useState<'ALL' | 'BRIGADIER' | 'PSYCHOLOGIST'>('ALL');
 
-  const handleGenerateCredentials = () => {
-    const promise = () => new Promise((resolve) => setTimeout(resolve, 2000));
-    toast.promise(promise, {
-      loading: 'Generando Carnets PDF...',
-      success: 'Carnets generados exitosamente',
-      error: 'Error al generar carnets',
+  const handleDownloadPDF = async () => {
+    const doc = new jsPDF();
+    
+    // Mock PDF Generation
+    doc.setFontSize(22);
+    doc.text('Carnets Digitales - Brigadieres', 20, 20);
+    
+    let y = 40;
+    MOCK_USERS.filter(u => u.role.includes('BRIGADIER')).forEach((user, i) => {
+        doc.setFontSize(14);
+        doc.text(`Nombre: ${user.name}`, 20, y);
+        doc.setFontSize(10);
+        doc.text(`Rol: ${user.role}`, 20, y + 6);
+        doc.rect(15, y - 5, 180, 20);
+        y += 25;
     });
+
+    doc.save('carnets-brigadieres.pdf');
+    toast.success('Descarga iniciada');
   };
 
+  const filteredUsers = MOCK_USERS.filter(u => {
+      if (userFilter === 'ALL') return true;
+      if (userFilter === 'BRIGADIER') return u.role.includes('BRIGADIER');
+      return u.role.includes('PSYCHOLOGIST');
+  });
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className='space-y-6'>
+      <div className='flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100'>
         <div>
-           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-             <Settings className="w-6 h-6 text-slate-600" />
-             Panel Administrativo
+           <h1 className='text-2xl font-bold text-slate-800 flex items-center gap-2'>
+             <Settings className='w-6 h-6 text-indigo-600' />
+             Administración
            </h1>
-           <p className="text-slate-500 text-sm">Gestión de usuarios y estudiantes.</p>
+           <p className='text-slate-500 text-sm'>Control total de usuarios y privilegios.</p>
         </div>
         
-        <div className="flex gap-2">
-           <Button variant={activeTab === 'USERS' ? 'primary' : 'secondary'} onClick={() => setActiveTab('USERS')}>
-             Brigadieres
-           </Button>
-           <Button variant={activeTab === 'STUDENTS' ? 'primary' : 'secondary'} onClick={() => setActiveTab('STUDENTS')}>
-             Alumnos
-           </Button>
+        <div className='flex bg-slate-100 p-1 rounded-xl shadow-inner'>
+           <button 
+             onClick={() => setActiveTab('USERS')}
+             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'USERS' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
+           >
+             Personal
+           </button>
+           <button 
+             onClick={() => setActiveTab('STUDENTS')}
+             className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'STUDENTS' ? 'bg-white shadow text-slate-800' : 'text-slate-500'}`}
+           >
+             Estudiantes
+           </button>
         </div>
       </div>
 
       {activeTab === 'USERS' && (
-         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-               <h2 className="font-semibold text-slate-700">Usuarios del Sistema</h2>
-               <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                 <UserPlus className="w-4 h-4 mr-2" />
-                 Nuevo Usuario
-               </Button>
+         <div className='bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in duration-300'>
+            <div className='p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4 bg-slate-50/50'>
+               <div className='flex gap-2 overflow-x-auto pb-2 md:pb-0'>
+                  {['ALL', 'BRIGADIER', 'PSYCHOLOGIST'].map((f) => (
+                      <button 
+                        key={f}
+                        onClick={() => setUserFilter(f as any)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${userFilter === f ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        {f === 'ALL' ? 'Todos' : f === 'BRIGADIER' ? 'Brigadieres' : 'Psicólogos'}
+                      </button>
+                  ))}
+               </div>
+               <div className='flex gap-2'>
+                  <Button size='sm' className='bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20'>
+                    <UserPlus className='w-4 h-4 mr-2' />
+                    Nuevo Usuario
+                  </Button>
+               </div>
             </div>
             
-            <div className="overflow-x-auto">
-               <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-500 font-medium">
+            <div className='overflow-x-auto'>
+               <table className='w-full text-sm text-left'>
+                  <thead className='text-xs text-slate-500 uppercase bg-slate-50/50'>
                      <tr>
-                        <th className="px-6 py-3">Nombre</th>
-                        <th className="px-6 py-3">Rol</th>
-                        <th className="px-6 py-3 text-right">Acciones</th>
+                        <th className='px-6 py-3'>Nombre</th>
+                        <th className='px-6 py-3'>Rol</th>
+                        <th className='px-6 py-3'>Estado</th>
+                        <th className='px-6 py-3 text-right'>Acciones</th>
                      </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                     {MOCK_USERS.map((user) => (
-                        <tr key={user.id} className="hover:bg-slate-50 transition-colors">
-                           <td className="px-6 py-3 font-medium text-slate-800">{user.name}</td>
-                           <td className="px-6 py-3">
-                              <span className={`inline-flex px-2 py-1 rounded-full text-xs font-bold
-                                 ${user.role === 'PROFESSOR_ADMIN' ? 'bg-purple-100 text-purple-700' : 
-                                   user.role === 'GENERAL_BRIGADIER' ? 'bg-indigo-100 text-indigo-700' :
-                                   user.role === 'PSYCHOLOGIST' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}
-                              `}>
-                                 {user.role.replace('_', ' ')}
-                              </span>
+                  <tbody className='divide-y divide-slate-100'>
+                     {filteredUsers.map((user) => (
+                        <tr key={user.id} className='hover:bg-slate-50 block sm:table-row'>
+                           <td className='px-6 py-4 font-bold text-slate-700 block sm:table-cell'>
+                               <div className="flex items-center gap-3">
+                                   <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">
+                                       {user.name.charAt(0)}
+                                   </div>
+                                   <div>
+                                       {user.name}
+                                       <div className="text-xs text-slate-400 font-normal sm:hidden">{user.role}</div>
+                                   </div>
+                               </div>
                            </td>
-                           <td className="px-6 py-3 text-right">
-                              <button className="text-slate-400 hover:text-red-500 transition-colors">
-                                 <Trash2 className="w-4 h-4" />
+                           <td className='px-6 py-4 hidden sm:table-cell'>
+                                <div className="flex gap-1 flex-wrap">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                        {user.role}
+                                    </span>
+                                </div>
+                           </td>
+                           <td className='px-6 py-4 block sm:table-cell'>
+                               <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800'>
+                                 Activo
+                               </span>
+                           </td>
+                           <td className='px-6 py-4 text-right block sm:table-cell'>
+                              <button className='text-slate-400 hover:text-red-600 transition-colors p-2'>
+                                <Trash2 className='w-4 h-4' />
                               </button>
                            </td>
                         </tr>
@@ -90,71 +142,22 @@ export default function AdminPage() {
                   </tbody>
                </table>
             </div>
-
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
-               <Button onClick={handleGenerateCredentials} variant="secondary" className="border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100">
-                  <BadgeCheck className="w-4 h-4 mr-2" />
-                  Generar Carnets (PDF)
-               </Button>
-            </div>
          </div>
       )}
 
       {activeTab === 'STUDENTS' && (
-         <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-               <div className="flex items-center gap-4">
-                  <h2 className="font-semibold text-slate-700">Directorio de Alumnos</h2>
-                  <div className="relative">
-                     <Search className="absolute top-2 left-2 w-4 h-4 text-slate-400" />
-                     <input className="pl-8 pr-4 py-1 text-sm border border-slate-200 rounded-md focus:ring-1 focus:ring-indigo-300 outline-none" placeholder="Buscar..." />
-                  </div>
+          <div className='bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center'>
+               <div className='max-w-md mx-auto'>
+                   <BadgeCheck className='w-12 h-12 text-indigo-600 mx-auto mb-4' />
+                   <h2 className='text-lg font-bold text-slate-800 mb-2'>Generación de Carnets</h2>
+                   <p className='text-slate-500 mb-6'>Genera y descarga los carnets digitales para todos los brigadieres activos en formato PDF.</p>
+                   
+                   <Button onClick={handleDownloadPDF} className='bg-indigo-600 hover:bg-indigo-700 w-full shadow-lg shadow-indigo-500/20'>
+                       <Download className='w-4 h-4 mr-2' />
+                       Descargar Carnets (PDF)
+                   </Button>
                </div>
-               <div className="flex items-center gap-2 text-xs text-slate-400">
-                  <AlertTriangle className="w-4 h-4 text-rose-500" />
-                  <span>= 3+ Incidencias (Alerta Roja)</span>
-               </div>
-            </div>
-
-            <div className="overflow-x-auto">
-               <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-500 font-medium">
-                     <tr>
-                        <th className="px-6 py-3">DNI</th>
-                        <th className="px-6 py-3">Alumno</th>
-                        <th className="px-6 py-3">Grado/Sección</th>
-                        <th className="px-6 py-3">Incidencias</th>
-                        <th className="px-6 py-3 text-right">Estado</th>
-                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                     {MOCK_STUDENTS.map((student) => {
-                        const isAlert = student.incidentsCount >= 3;
-                        return (
-                           <tr key={student.id} className={isAlert ? 'bg-rose-50/50 hover:bg-rose-50' : 'hover:bg-slate-50'}>
-                              <td className="px-6 py-3 font-mono text-slate-500">{student.dni}</td>
-                              <td className="px-6 py-3 font-medium text-slate-800">{student.firstName} {student.lastName}</td>
-                              <td className="px-6 py-3 text-slate-600">{student.grade}° {student.section}</td>
-                              <td className="px-6 py-3">
-                                 <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${isAlert ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>
-                                    {student.incidentsCount}
-                                 </span>
-                              </td>
-                              <td className="px-6 py-3 text-right">
-                                 {isAlert && (
-                                    <div className="inline-flex items-center gap-1 text-rose-600 font-bold text-xs uppercase animate-pulse">
-                                       <AlertTriangle className="w-4 h-4" />
-                                       Intervención
-                                    </div>
-                                 )}
-                              </td>
-                           </tr>
-                        );
-                     })}
-                  </tbody>
-               </table>
-            </div>
-         </div>
+          </div>
       )}
     </div>
   );

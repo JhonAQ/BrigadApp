@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "sonner";
