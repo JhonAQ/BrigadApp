@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require("fs");
 
 const content = `"use client";
 
@@ -139,4 +139,4 @@ export function Sidebar() {
 }
 `;
 
-fs.writeFileSync('src/components/dashboard/sidebar.tsx', content);
+fs.writeFileSync("src/components/dashboard/sidebar.tsx", content);

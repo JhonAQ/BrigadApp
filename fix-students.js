@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require("fs");
 
 const content = `"use client";
 
@@ -240,4 +240,4 @@ export default function StudentsPage() {
 }
 `;
 
-fs.writeFileSync('src/app/dashboard/students/page.tsx', content);
+fs.writeFileSync("src/app/dashboard/students/page.tsx", content);

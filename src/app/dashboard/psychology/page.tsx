@@ -28,14 +28,13 @@ export default function PsychologyPage() {
   const [activeTab, setActiveTab] = useState<"PENDIENTE" | "ATENDIDA">(
     "PENDIENTE",
   );
-  const [selectedIncident, setSelectedIncident] = useState<any>(
-    null,
-  );
+  const [selectedIncident, setSelectedIncident] = useState<any>(null);
   const [notes, setNotes] = useState("");
   const [incidents, setIncidents] = useState<any[]>([]);
 
   const fetchData = async () => {
-    const { data } = await supabase.from("incidents")
+    const { data } = await supabase
+      .from("incidents")
       .select("*, students(*)")
       .eq("needs_psychology", true);
     if (data) setIncidents(data);
@@ -53,7 +52,10 @@ export default function PsychologyPage() {
   const handleSaveNotes = async () => {
     if (!selectedIncident) return;
     try {
-      const { error } = await supabase.from("incidents").update({ psych_notes: notes }).eq("id", selectedIncident.id);
+      const { error } = await supabase
+        .from("incidents")
+        .update({ psych_notes: notes })
+        .eq("id", selectedIncident.id);
       if (error) throw error;
       toast.success("Notas guardadas correctamente");
       fetchData();
@@ -65,7 +67,10 @@ export default function PsychologyPage() {
   const handleMarkAsAttended = async () => {
     if (!selectedIncident) return;
     try {
-      const { error } = await supabase.from("incidents").update({ status: "ATENDIDA", psych_notes: notes }).eq("id", selectedIncident.id);
+      const { error } = await supabase
+        .from("incidents")
+        .update({ status: "ATENDIDA", psych_notes: notes })
+        .eq("id", selectedIncident.id);
       if (error) throw error;
       toast.success("Caso marcado como ATENDIDO");
       setSelectedIncident(null);
@@ -117,34 +122,37 @@ export default function PsychologyPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-2">
-            {incidents.filter(i => i.status === activeTab).map((incident) => (
-              <button
-                key={incident.id}
-                onClick={() => handleOpenCase(incident)}
-                className={`w-full text-left p-4 rounded-xl border transition-all hover:shadow-md ${selectedIncident?.id === incident.id ? "bg-rose-50 border-rose-200 ring-1 ring-rose-200" : "bg-white border-slate-100 hover:border-rose-100"}`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide
+            {incidents
+              .filter((i) => i.status === activeTab)
+              .map((incident) => (
+                <button
+                  key={incident.id}
+                  onClick={() => handleOpenCase(incident)}
+                  className={`w-full text-left p-4 rounded-xl border transition-all hover:shadow-md ${selectedIncident?.id === incident.id ? "bg-rose-50 border-rose-200 ring-1 ring-rose-200" : "bg-white border-slate-100 hover:border-rose-100"}`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide
                       ${incident.type === "LEVE" ? "bg-emerald-100 text-emerald-700" : incident.type === "MODERADA" ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}
                     `}
-                  >
-                    {incident.type}
-                  </span>
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {incident.time}
-                  </span>
-                </div>
-                <h3 className="font-semibold text-slate-800 truncate">
-                  {incident.students?.first_name} {incident.students?.last_name}
-                </h3>
-                <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                  {incident.description}
-                </p>
-              </button>
-            ))}
-            {incidents.filter(i => i.status === activeTab).length === 0 && (
+                    >
+                      {incident.type}
+                    </span>
+                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {incident.time}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-slate-800 truncate">
+                    {incident.students?.first_name}{" "}
+                    {incident.students?.last_name}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                    {incident.description}
+                  </p>
+                </button>
+              ))}
+            {incidents.filter((i) => i.status === activeTab).length === 0 && (
               <div className="text-center py-10 text-slate-400">
                 <CheckCircle2 className="w-10 h-10 mx-auto mb-2 opacity-20" />
                 <p>No hay casos en esta bandeja</p>
@@ -165,8 +173,7 @@ export default function PsychologyPage() {
                   </h2>
                   <p className="text-sm text-slate-500">
                     {selectedIncident.students?.grade}°{" "}
-                    {selectedIncident.students?.section} {" "}
-                    {}
+                    {selectedIncident.students?.section} {}
                   </p>
                 </div>
                 <Button variant="secondary" size="sm">
@@ -184,11 +191,7 @@ export default function PsychologyPage() {
                     {selectedIncident.description}
                   </p>
                   <div className="mt-3 text-xs text-amber-700/60 font-medium">
-                    Reportado por:{" "}
-                    {
-                      "Oficial"
-                    }{" "}
-                    • {selectedIncident.date}
+                    Reportado por: {"Oficial"} • {selectedIncident.date}
                   </div>
                 </div>
 
