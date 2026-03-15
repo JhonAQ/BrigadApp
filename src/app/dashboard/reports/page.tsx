@@ -54,7 +54,7 @@ export default function ReportsPage() {
 
   return (
     <div
-      className={`space-y-6 ${isFullscreen ? "fixed inset-0 z-50 bg-slate-900 p-8 overflow-y-auto text-slate-200" : ""}`}
+      className={`space-y-6 ${isFullscreen ? "fixed inset-0 z-50 bg-slate-900 p-8 overflow-y-auto text-slate-900" : ""}`}
     >
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -209,7 +209,7 @@ export default function ReportsPage() {
               <div
                 className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl mb-3 shadow-lg ${
                   index === 0
-                    ? "bg-amber-400 text-white"
+                    ? "bg-amber-400 text-slate-900"
                     : index === 1
                       ? "bg-slate-300 text-slate-600"
                       : "bg-orange-300 text-orange-800"
@@ -218,7 +218,7 @@ export default function ReportsPage() {
                 {index + 1}
               </div>
               <h4
-                className={`font-bold ${isFullscreen ? "text-white" : "text-slate-800"}`}
+                className={`font-bold ${isFullscreen ? "text-slate-900" : "text-slate-800"}`}
               >
                 {student.name}
               </h4>

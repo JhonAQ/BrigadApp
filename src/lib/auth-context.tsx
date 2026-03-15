@@ -1,13 +1,24 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { User, MOCK_USERS } from "./mock";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { supabase } from "./supabase";
+
+export interface User {
+  id: string;
+  name: string;
+  role: string;
+  dni: string;
+  password?: string;
+  grade?: string;
+  section?: string;
+  avatar?: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  login: (dni: string, password?: string) => void;
+  login: (dni: string, password?: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -19,7 +30,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // Check localStorage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem("brigadapp_user");
     if (storedUser) {
@@ -33,32 +43,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
-  const login = (dni: string, password?: string) => {
+  const login = async (dni: string, password?: string) => {
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-        const foundUser = MOCK_USERS.find(u => u.dni === dni);
+    try {
+      // Buscamos al usuario en la tabla validando el dni
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("dni", dni)
+        .single();
 
-        if (!foundUser) {
-            toast.error("DNI no encontrado");
-            setIsLoading(false);
-            return;
-        }
-
-        // Simple password check (in a real app, this would be hashed)
-        if (foundUser.password && foundUser.password !== password) {
-            toast.error("Contraseña incorrecta");
-            setIsLoading(false);
-            return;
-        }
-
-        setUser(foundUser);
-        localStorage.setItem("brigadapp_user", JSON.stringify(foundUser));
-        toast.success(`Bienvenido, ${foundUser.name}`);
-        router.push("/dashboard");
+      if (error || !data) {
+        toast.error("DNI no encontrado");
         setIsLoading(false);
-    }, 800);
+        return;
+      }
+
+      // Validamos la contraseña
+      if (data.password && data.password !== password) {
+        toast.error("Contraseña incorrecta");
+        setIsLoading(false);
+        return;
+      }
+
+      setUser(data);
+      localStorage.setItem("brigadapp_user", JSON.stringify(data));
+      toast.success(`Bienvenido, ${data.name}`);
+      router.push("/dashboard");
+    } catch (err: any) {
+      toast.error("Error al conectar con la base de datos");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {

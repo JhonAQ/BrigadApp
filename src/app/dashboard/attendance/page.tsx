@@ -57,7 +57,7 @@ export default function AttendancePage() {
         </h1>
         
         {!isScanning && (
-            <Button onClick={resetScan} size="sm" variant="outline" className="bg-white hover:bg-slate-50 border-slate-200 text-slate-700">
+            <Button onClick={resetScan} size="sm" variant="secondary" className="bg-white hover:bg-slate-50 border-slate-200 text-slate-700">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Nueva Lectura
             </Button>
@@ -83,12 +83,12 @@ export default function AttendancePage() {
                             onUserMediaError={() => setHasPermission(false)}
                         />
                     ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-white/50 bg-slate-900 p-8 text-center">
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-900/50 bg-slate-900 p-8 text-center">
                             <Camera className="w-16 h-16 mb-4 opacity-50" />
                             <p className="font-bold mb-2">Sin acceso a la cámara</p>
                             <p className="text-sm">Por favor permite el acceso a la cámara para escanear.</p>
                             <Button 
-                                variant="link" 
+                                variant="ghost" 
                                 className="text-indigo-400 mt-4" 
                                 onClick={() => window.location.reload()}
                             >
@@ -123,7 +123,7 @@ export default function AttendancePage() {
                     </div>
                     
                     <div className="absolute top-8 left-0 right-0 text-center z-20 pointer-events-none">
-                        <span className="bg-black/60 text-white text-xs font-bold px-4 py-2 rounded-full backdrop-blur-md border border-white/10 uppercase tracking-widest shadow-lg">
+                        <span className="bg-black/60 text-slate-900 text-xs font-bold px-4 py-2 rounded-full backdrop-blur-md border border-white/10 uppercase tracking-widest shadow-lg">
                             Escanear QR Carnet
                         </span>
                     </div>
@@ -140,7 +140,7 @@ export default function AttendancePage() {
                      <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-lg -mt-20 relative z-30">
                         <QrCode className="w-12 h-12 text-indigo-600" />
                         <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-white">
-                            <CheckCircle2 className="w-5 h-5 text-white" />
+                            <CheckCircle2 className="w-5 h-5 text-slate-900" />
                         </div>
                      </div>
                      
@@ -163,11 +163,11 @@ export default function AttendancePage() {
                      <div className="space-y-3 pt-2 border-t border-slate-100">
                          <p className="text-xs text-slate-400 font-bold uppercase text-left pl-1 mb-2">Validación de Uniforme</p>
                          <div className="grid grid-cols-2 gap-3">
-                             <Button onClick={() => { toast.success('Asistencia registrada: Uniforme Completo'); resetScan(); }} className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20">
+                             <Button onClick={() => { toast.success('Asistencia registrada: Uniforme Completo'); resetScan(); }} className="bg-emerald-600 hover:bg-emerald-700 text-slate-900 shadow-lg shadow-emerald-500/20">
                                 <CheckCircle2 className="w-4 h-4 mr-2" />
                                 Completo
                              </Button>
-                             <Button onClick={() => { toast.warning('Asistencia registrada: Uniforme Incompleto'); resetScan(); }} variant="destructive" className="shadow-lg shadow-red-500/20">
+                             <Button onClick={() => { toast.warning('Asistencia registrada: Uniforme Incompleto'); resetScan(); }} variant="danger" className="shadow-lg shadow-red-500/20">
                                 <XCircle className="w-4 h-4 mr-2" />
                                 Incompleto
                              </Button>

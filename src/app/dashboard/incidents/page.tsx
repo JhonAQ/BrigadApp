@@ -1,6 +1,8 @@
 'use client';
+import { supabase } from '@/lib/supabase';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { 
   Building2, 
@@ -21,12 +23,33 @@ import { MOCK_STUDENTS, Incident, getGrades, getSections } from '@/lib/mock';
 import { toast } from 'sonner';
 
 export default function IncidentsPage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'NEW' | 'HISTORY'>('NEW');
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Selection Filters
   const [selectedGrade, setSelectedGrade] = useState('');
+  // Supabase states
+  const [dbStudents, setDbStudents] = useState<any[]>([]);
+  const [dbIncidents, setDbIncidents] = useState<any[]>([]);
+  const [dbSections, setDbSections] = useState<any[]>([]);
+  const [needsPsychology, setNeedsPsychology] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      const [{data: st}, {data: inc}, {data: sec}] = await Promise.all([
+        supabase.from('students').select('*'),
+        supabase.from('incidents').select('*, students(*)'),
+        supabase.from('sections').select('*')
+      ]);
+      if(st) setDbStudents(st);
+      if(inc) setDbIncidents(inc);
+      if(sec) setDbSections(sec);
+    }
+    load();
+  }, []);
+
   const [selectedSection, setSelectedSection] = useState('');
   
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
@@ -36,12 +59,12 @@ export default function IncidentsPage() {
   // Mock History
   const [history, setHistory] = useState<any[]>([]);
 
-  const filteredStudents = MOCK_STUDENTS.filter(s => {
+  const filteredStudents = dbStudents.filter(s => {
       // If user typed something, search everywhere
       if (searchTerm.length > 0) {
-          return s.firstName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                 s.lastName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                 s.dni.includes(searchTerm);
+          return s.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                 s.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                 s.last_name?.toLowerCase().includes(searchTerm.toLowerCase());
       }
       // Otherwise use filters
       if (selectedGrade && s.grade !== selectedGrade) return false;
@@ -49,30 +72,42 @@ export default function IncidentsPage() {
       return true;
   });
 
-  const availableGrades = getGrades();
-  const availableSections = selectedGrade ? getSections(selectedGrade) : [];
+  const availableGrades = Array.from(new Set(dbSections.map((s: any) => s.grade))).sort();
+  const availableSections = dbSections.filter((s: any) => s.grade === selectedGrade).map((s: any) => s.name).sort();
 
   const handleNext = () => setStep(step + 1);
   
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedStudent || !severity || !description) return;
     
-    const newIncident = {
-        id: Math.random().toString(),
-        studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
+    const { error } = await supabase.from('incidents').insert([
+      {
+        student_id: selectedStudent.id,
         type: severity,
-        date: new Date().toLocaleDateString(),
-        time: new Date().toLocaleTimeString(),
-        status: 'PENDIENTE'
-    };
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().split(' ')[0].substring(0, 5),
+        description: description,
+        status: 'PENDIENTE',
+        needs_psychology: needsPsychology,
+        reporter_id: user?.id
+      }
+    ]);
 
-    setHistory([newIncident, ...history]);
-    toast.success('Incidencia registrada correctamente');
+    if (!error) {
+       toast.success('Incidencia registrada correctamente');
+       // Reload
+       const { data } = await supabase.from('incidents').select('*, students(*)');
+       if(data) setDbIncidents(data);
+    } else {
+       toast.error('Error al guardar en BD: ' + error.message);
+    }
     
     // Reset form
     setStep(1);
     setSelectedStudent(null);
     setSeverity(null);
+    setDescription('');
+    setNeedsPsychology(false);
     setDescription('');
     setSearchTerm('');
     setSelectedGrade('');
@@ -109,22 +144,48 @@ export default function IncidentsPage() {
                 <h3 className='font-bold text-slate-700'>Incidencias Recientes</h3>
              </div>
              <div className='divide-y divide-slate-100'>
-                {history.length === 0 ? (
+                {dbIncidents.length === 0 ? (
                     <div className='p-8 text-center text-slate-400'>
                         <History className='w-8 h-8 mx-auto mb-2 opacity-50' />
                         <p>No has registrado incidencias hoy.</p>
                     </div>
                 ) : (
-                    history.map((inc) => (
-                        <div key={inc.id} className='p-4 flex items-center justify-between hover:bg-slate-50'>
-                             <div className='flex items-center gap-3'>
-                                <div className={`w-2 h-2 rounded-full ${inc.type === 'GRAVE' ? 'bg-red-500' : inc.type === 'MODERADA' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-                                <div>
-                                    <p className='font-bold text-slate-800'>{inc.studentName}</p>
-                                    <p className='text-xs text-slate-500'>{inc.date} • {inc.time}</p>
-                                </div>
+                    dbIncidents.map((inc) => (
+                        <div key={inc.id} className='p-4 flex flex-col hover:bg-slate-50 gap-2'>
+                             <div className='flex items-center justify-between'>
+                                 <div className='flex items-center gap-3'>
+                                    <div className={`w-2 h-2 rounded-full ${inc.type === 'GRAVE' ? 'bg-red-500' : inc.type === 'MODERADA' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                                    <div>
+                                        <p className='font-bold text-slate-800'>{inc.students?.first_name} {inc.students?.last_name}</p>
+                                        <p className='text-xs text-slate-500'>{inc.date} • {inc.time}</p>
+                                    </div>
+                                 </div>
+                                 <span className='text-xs font-bold px-2 py-1 bg-slate-100 rounded text-slate-600'>{inc.type}</span>
                              </div>
-                             <span className='text-xs font-bold px-2 py-1 bg-slate-100 rounded text-slate-600'>{inc.type}</span>
+                             
+                             <div className='pl-5'>
+                                 <p className='text-sm text-slate-600 mb-2'><span className='font-semibold text-slate-700'>Descripción:</span> {inc.description}</p>
+                                 
+                                 {inc.needs_psychology && (
+                                    <div className='mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg'>
+                                        <div className='flex items-center gap-2 mb-1'>
+                                            <span className='text-xs font-bold uppercase text-indigo-700 flex items-center gap-1'>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                                Derivado a Psicología
+                                            </span>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${inc.status === 'ATENDIDA' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                                {inc.status === 'ATENDIDA' ? 'ATENDIDO' : 'PENDIENTE'}
+                                            </span>
+                                        </div>
+                                        {inc.status === 'ATENDIDA' && inc.psych_notes && (
+                                            <p className='text-xs text-indigo-900 mt-2 border-t border-indigo-200/50 pt-2'>
+                                                <span className='font-semibold block mb-1'>Resultado / Notas:</span>
+                                                {inc.psych_notes}
+                                            </p>
+                                        )}
+                                    </div>
+                                 )}
+                             </div>
                         </div>
                     ))
                 )}
@@ -195,10 +256,10 @@ export default function IncidentsPage() {
                         className={`w-full text-left p-3 rounded-xl flex items-center justify-between group transition-all border ${selectedStudent?.id === student.id ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200' : 'bg-white border-transparent hover:bg-slate-50 hover:border-slate-200'}`}
                         >
                         <div>
-                            <p className={`font-bold text-sm ${selectedStudent?.id === student.id ? 'text-indigo-700' : 'text-slate-700'}`}>{student.firstName} {student.lastName}</p>
-                            <p className='text-xs text-slate-400'>{student.grade}° {student.section} - {student.dni}</p>
-                        </div>
-                        {selectedStudent?.id === student.id && <CheckCircle2 className='w-5 h-5 text-indigo-500' />}
+                        <p className={`font-bold text-sm ${selectedStudent?.id === student.id ? 'text-indigo-700' : 'text-slate-700'}`}>{student.first_name} {student.last_name}</p>
+                        <p className='text-xs text-slate-400'>{student.grade} - Secc. {student.section}</p>
+                    </div>
+                    {selectedStudent?.id === student.id && <CheckCircle2 className='w-5 h-5 text-indigo-500' />}
                         </button>
                     ))
                 ) : (
@@ -253,6 +314,19 @@ export default function IncidentsPage() {
                 />
             </div>
 
+            <div className='mb-6 p-4 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-between'>
+                <div>
+                   <h4 className='font-bold text-indigo-900 text-sm'>¿Elevar a Psicología?</h4>
+                   <p className='text-xs text-indigo-700/80 mt-1'>Marque esta casilla si considera que el estudiante requiere evaluación o soporte psicológico inmediato.</p>
+                </div>
+                <input 
+                   type="checkbox" 
+                   checked={needsPsychology}
+                   onChange={(e) => setNeedsPsychology(e.target.checked)}
+                   className='w-6 h-6 rounded-md text-indigo-600 border-indigo-300 focus:ring-indigo-500'
+                />
+            </div>
+
             <div className='flex justify-between items-center mt-6'>
                 <Button variant='secondary' onClick={() => setStep(1)}>Atrás</Button>
                 <Button onClick={handleNext} disabled={!severity || !description} className='bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20'>
@@ -271,11 +345,11 @@ export default function IncidentsPage() {
             <div className='bg-slate-50 rounded-xl p-5 space-y-4 mb-6 border border-slate-100'>
                 <div className='flex items-start gap-4'>
                     <div className='w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0 font-bold text-indigo-600 border border-indigo-50'>
-                        {selectedStudent?.firstName.charAt(0)}
+                        {selectedStudent?.first_name.charAt(0)}
                     </div>
                     <div>
                         <p className='text-xs text-slate-400 uppercase font-bold'>Alumno</p>
-                        <p className='font-bold text-slate-800 text-lg'>{selectedStudent?.firstName} {selectedStudent?.lastName}</p>
+                        <p className='font-bold text-slate-800 text-lg'>{selectedStudent?.first_name} {selectedStudent?.last_name}</p>
                         <p className='text-slate-500 text-xs'>{selectedStudent?.grade}° {selectedStudent?.section}</p>
                     </div>
                 </div>
@@ -306,7 +380,7 @@ export default function IncidentsPage() {
 
             <div className='flex justify-between items-center mt-6'>
                 <Button variant='secondary' onClick={() => setStep(2)}>Editar</Button>
-                <Button onClick={handleSubmit} className='bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/20 w-40'>
+                <Button onClick={handleSubmit} className='bg-emerald-600 hover:bg-emerald-700 text-slate-900 shadow-lg shadow-emerald-500/20 w-40'>
                 <Save className='w-4 h-4 mr-2' />
                 Registrar
                 </Button>

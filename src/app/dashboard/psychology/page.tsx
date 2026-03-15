@@ -1,54 +1,78 @@
 "use client";
 
 import { useState } from "react";
-import { MOCK_INCIDENTS, MOCK_STUDENTS, Incident } from "@/lib/mock";
+import { useAuth } from "@/lib/auth-context";
+import { Incident } from "@/lib/mock";
+import { supabase } from "@/lib/supabase";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   AlertCircle,
+  MoreHorizontal,
   CheckCircle2,
   Clock,
   FileText,
-  MoreHorizontal,
   Search,
   User,
+  History,
+  Phone,
+  ChevronLeft,
+  X,
+  Save,
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PsychologyPage() {
+  const { user } = useAuth();
+  const isPsych = user?.role === "PSYCHOLOGIST";
   const [activeTab, setActiveTab] = useState<"PENDIENTE" | "ATENDIDA">(
     "PENDIENTE",
   );
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(
+  const [selectedIncident, setSelectedIncident] = useState<any>(
     null,
   );
   const [notes, setNotes] = useState("");
+  const [incidents, setIncidents] = useState<any[]>([]);
 
-  // Hydrate incidents with student names
-  const incidents = MOCK_INCIDENTS.map((inc) => ({
-    ...inc,
-    student: MOCK_STUDENTS.find((s) => s.id === inc.studentId),
-  })).filter((inc) => inc.status === activeTab);
+  const fetchData = async () => {
+    const { data } = await supabase.from("incidents")
+      .select("*, students(*)")
+      .eq("needs_psychology", true);
+    if (data) setIncidents(data);
+  };
 
-  const handleOpenCase = (incident: Incident) => {
+  useEffect(() => {
+    fetchData();
+  }, [activeTab]);
+
+  const handleOpenCase = (incident: any) => {
     setSelectedIncident(incident);
-    setNotes(incident.psychNotes || "");
+    setNotes(incident.psych_notes || "");
   };
 
-  const handleSaveNotes = () => {
+  const handleSaveNotes = async () => {
     if (!selectedIncident) return;
-
-    // In real app, update backend here
-    toast.success("Caso actualizado y notas guardadas");
-
-    // Mock update local state (won't persist reload)
-    // Close modal
-    setSelectedIncident(null);
+    try {
+      const { error } = await supabase.from("incidents").update({ psych_notes: notes }).eq("id", selectedIncident.id);
+      if (error) throw error;
+      toast.success("Notas guardadas correctamente");
+      fetchData();
+    } catch (error: any) {
+      toast.error("Error guardando notas: " + error.message);
+    }
   };
 
-  const handleMarkAsAttended = () => {
-    // Mock logic
-    toast.success("Caso marcado como ATENDIDO");
-    setSelectedIncident(null);
+  const handleMarkAsAttended = async () => {
+    if (!selectedIncident) return;
+    try {
+      const { error } = await supabase.from("incidents").update({ status: "ATENDIDA", psych_notes: notes }).eq("id", selectedIncident.id);
+      if (error) throw error;
+      toast.success("Caso marcado como ATENDIDO");
+      setSelectedIncident(null);
+      fetchData();
+    } catch (error: any) {
+      toast.error("Error actualizando estado: " + error.message);
+    }
   };
 
   return (
@@ -66,7 +90,7 @@ export default function PsychologyPage() {
           >
             Pendientes
             <span className="ml-2 bg-rose-100 text-rose-600 text-xs px-1.5 py-0.5 rounded-full">
-              {MOCK_INCIDENTS.filter((i) => i.status === "PENDIENTE").length}
+              {incidents.filter((i) => i.status === "PENDIENTE").length}
             </span>
           </button>
           <button
@@ -93,7 +117,7 @@ export default function PsychologyPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-2">
-            {incidents.map((incident) => (
+            {incidents.filter(i => i.status === activeTab).map((incident) => (
               <button
                 key={incident.id}
                 onClick={() => handleOpenCase(incident)}
@@ -113,14 +137,14 @@ export default function PsychologyPage() {
                   </span>
                 </div>
                 <h3 className="font-semibold text-slate-800 truncate">
-                  {incident.student?.firstName} {incident.student?.lastName}
+                  {incident.students?.first_name} {incident.students?.last_name}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 line-clamp-2">
                   {incident.description}
                 </p>
               </button>
             ))}
-            {incidents.length === 0 && (
+            {incidents.filter(i => i.status === activeTab).length === 0 && (
               <div className="text-center py-10 text-slate-400">
                 <CheckCircle2 className="w-10 h-10 mx-auto mb-2 opacity-20" />
                 <p>No hay casos en esta bandeja</p>
@@ -136,13 +160,13 @@ export default function PsychologyPage() {
               <div className="p-6 border-b border-slate-100 flex justify-between items-start bg-slate-50/50">
                 <div>
                   <h2 className="text-xl font-bold text-slate-800 mb-1">
-                    {selectedIncident.student?.firstName}{" "}
-                    {selectedIncident.student?.lastName}
+                    {selectedIncident.students?.first_name}{" "}
+                    {selectedIncident.students?.last_name}
                   </h2>
                   <p className="text-sm text-slate-500">
-                    {selectedIncident.student?.grade}°{" "}
-                    {selectedIncident.student?.section} • DNI:{" "}
-                    {selectedIncident.student?.dni}
+                    {selectedIncident.students?.grade}°{" "}
+                    {selectedIncident.students?.section} {" "}
+                    {}
                   </p>
                 </div>
                 <Button variant="secondary" size="sm">
@@ -162,9 +186,7 @@ export default function PsychologyPage() {
                   <div className="mt-3 text-xs text-amber-700/60 font-medium">
                     Reportado por:{" "}
                     {
-                      MOCK_USERS.find(
-                        (u) => u.id === selectedIncident.reporterId,
-                      )?.name
+                      "Oficial"
                     }{" "}
                     • {selectedIncident.date}
                   </div>

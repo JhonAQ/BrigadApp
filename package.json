@@ -8,7 +8,9 @@
     "start": "next start"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "framer-motion": "^12.36.0",
     "jspdf": "^4.2.0",
     "jspdf-autotable": "^5.0.7",

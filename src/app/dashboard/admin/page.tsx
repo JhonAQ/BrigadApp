@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { MOCK_USERS, MOCK_STUDENTS, UserRole } from '@/lib/mock';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { jsPDF } from 'jspdf';
 import { 
@@ -12,43 +12,85 @@ import {
   Search, 
   Settings, 
   Trash2, 
-  UserPlus
+  UserPlus,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'USERS' | 'STUDENTS'>('USERS');
   const [userFilter, setUserFilter] = useState<'ALL' | 'BRIGADIER' | 'PSYCHOLOGIST'>('ALL');
+  const [users, setUsers] = useState<any[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({ name: '', dni: '', role: 'BRIGADIER_AULA', password: '' });
+
+  const fetchUsers = async () => {
+    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    if (data) setUsers(data);
+    if (error) toast.error('Error cargando usuarios: ' + error.message);
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { error } = await supabase.from('users').insert(formData);
+      if (error) throw error;
+      toast.success('Usuario creado correctamente');
+      setIsModalOpen(false);
+      setFormData({ name: '', dni: '', role: 'BRIGADIER_AULA', password: '' });
+      fetchUsers();
+    } catch (error: any) {
+      toast.error('Error al crear usuario: ' + error.message);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (!confirm('¿Eliminar usuario?')) return;
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (error) {
+       toast.error('Error al eliminar: ' + error.message);
+    } else {
+       toast.success('Usuario eliminado');
+       fetchUsers();
+    }
+  };
 
   const handleDownloadPDF = async () => {
     const doc = new jsPDF();
-    
-    // Mock PDF Generation
     doc.setFontSize(22);
     doc.text('Carnets Digitales - Brigadieres', 20, 20);
     
     let y = 40;
-    MOCK_USERS.filter(u => u.role.includes('BRIGADIER')).forEach((user, i) => {
+    users.filter(u => u.role?.includes('BRIGADIER')).forEach((user, i) => {
         doc.setFontSize(14);
         doc.text(`Nombre: ${user.name}`, 20, y);
         doc.setFontSize(10);
-        doc.text(`Rol: ${user.role}`, 20, y + 6);
+        doc.text(`Rol: ${user.role.replace(/_/g, ' ')}`, 20, y + 6);
         doc.rect(15, y - 5, 180, 20);
         y += 25;
+        // add logic for new page if y > 270
+        if (y > 270) {
+            doc.addPage();
+            y = 20;
+        }
     });
 
     doc.save('carnets-brigadieres.pdf');
     toast.success('Descarga iniciada');
   };
 
-  const filteredUsers = MOCK_USERS.filter(u => {
+  const filteredUsers = users.filter(u => {
       if (userFilter === 'ALL') return true;
-      if (userFilter === 'BRIGADIER') return u.role.includes('BRIGADIER');
-      return u.role.includes('PSYCHOLOGIST');
+      if (userFilter === 'BRIGADIER') return u.role?.includes('BRIGADIER');
+      return u.role === 'PSYCHOLOGIST';
   });
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-6 relative'>
       <div className='flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100'>
         <div>
            <h1 className='text-2xl font-bold text-slate-800 flex items-center gap-2'>
@@ -82,14 +124,14 @@ export default function AdminPage() {
                       <button 
                         key={f}
                         onClick={() => setUserFilter(f as any)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${userFilter === f ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${userFilter === f ? 'bg-indigo-600 border-indigo-600 text-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                       >
                         {f === 'ALL' ? 'Todos' : f === 'BRIGADIER' ? 'Brigadieres' : 'Psicólogos'}
                       </button>
                   ))}
                </div>
                <div className='flex gap-2'>
-                  <Button size='sm' className='bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20'>
+                  <Button onClick={() => setIsModalOpen(true)} size='sm' className='bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20'>
                     <UserPlus className='w-4 h-4 mr-2' />
                     Nuevo Usuario
                   </Button>
@@ -101,8 +143,8 @@ export default function AdminPage() {
                   <thead className='text-xs text-slate-500 uppercase bg-slate-50/50'>
                      <tr>
                         <th className='px-6 py-3'>Nombre</th>
+                        <th className='px-6 py-3'>DNI / User</th>
                         <th className='px-6 py-3'>Rol</th>
-                        <th className='px-6 py-3'>Estado</th>
                         <th className='px-6 py-3 text-right'>Acciones</th>
                      </tr>
                   </thead>
@@ -112,13 +154,16 @@ export default function AdminPage() {
                            <td className='px-6 py-4 font-bold text-slate-700 block sm:table-cell'>
                                <div className="flex items-center gap-3">
                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600">
-                                       {user.name.charAt(0)}
+                                       {user.name?.charAt(0) || '?'}
                                    </div>
                                    <div>
                                        {user.name}
                                        <div className="text-xs text-slate-400 font-normal sm:hidden">{user.role}</div>
                                    </div>
                                </div>
+                           </td>
+                           <td className='px-6 py-4 hidden sm:table-cell text-slate-600 font-mono'>
+                               {user.dni}
                            </td>
                            <td className='px-6 py-4 hidden sm:table-cell'>
                                 <div className="flex gap-1 flex-wrap">
@@ -127,13 +172,8 @@ export default function AdminPage() {
                                     </span>
                                 </div>
                            </td>
-                           <td className='px-6 py-4 block sm:table-cell'>
-                               <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800'>
-                                 Activo
-                               </span>
-                           </td>
                            <td className='px-6 py-4 text-right block sm:table-cell'>
-                              <button className='text-slate-400 hover:text-red-600 transition-colors p-2'>
+                              <button onClick={() => handleDeleteUser(user.id)} className='text-slate-400 hover:text-red-600 transition-colors p-2'>
                                 <Trash2 className='w-4 h-4' />
                               </button>
                            </td>
@@ -158,6 +198,74 @@ export default function AdminPage() {
                    </Button>
                </div>
           </div>
+      )}
+
+      {/* MODAL CREAR USUARIO */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+             <div className="flex justify-between items-center p-4 border-b border-slate-100">
+              <h3 className="font-bold text-lg text-slate-800">Crear Nuevo Usuario</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:bg-slate-100 p-1 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleCreateUser} className="p-6 space-y-4">
+               <div>
+                  <label className="text-sm font-semibold text-slate-700 block mb-1">Nombre Completo</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 text-slate-900" 
+                  />
+               </div>
+               <div>
+                  <label className="text-sm font-semibold text-slate-700 block mb-1">DNI (Usuario)</label>
+                  <input 
+                    required 
+                    type="text" 
+                    value={formData.dni}
+                    onChange={(e) => setFormData({...formData, dni: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 text-slate-900" 
+                  />
+               </div>
+               <div>
+                  <label className="text-sm font-semibold text-slate-700 block mb-1">Contraseña</label>
+                  <input 
+                    required 
+                    type="password" 
+                    value={formData.password}
+                    onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 text-slate-900" 
+                  />
+               </div>
+               <div>
+                  <label className="text-sm font-semibold text-slate-700 block mb-1">Rol en el Sistema</label>
+                  <select 
+                    required
+                    value={formData.role}
+                    onChange={(e) => setFormData({...formData, role: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 text-slate-900"
+                  >
+                    <option value="BRIGADIER_AULA">Brigadier de Aula</option>
+                    <option value="BRIGADIER_PATRULLA">Brigadier de Patrulla</option>
+                    <option value="BRIGADIER_GENERAL_ALTERNO">Brigadier General Alterno</option>
+                    <option value="BRIGADIER_GENERAL_PRINCIPAL">Brigadier General Principal</option>
+                    <option value="DOCENTE">Docente / Administrador</option>
+                    <option value="PSYCHOLOGIST">Psicólogo</option>
+                  </select>
+               </div>
+               
+               <div className="pt-4 flex justify-end gap-3">
+                  <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+                  <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20">Guardar Usuario</Button>
+               </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

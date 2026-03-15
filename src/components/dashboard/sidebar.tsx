@@ -13,7 +13,9 @@ import {
   Users, 
   UserCheck2,
   BrainCircuit,
-  GraduationCap
+  GraduationCap,
+  CalendarDays,
+  ListTree
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -34,37 +36,55 @@ export function Sidebar() {
       title: 'Inicio', 
       href: '/dashboard', 
       icon: Home,
-      roles: ['PROFESSOR_ADMIN', 'GENERAL_BRIGADIER', 'SUB_BRIGADIER', 'PATROL_BRIGADIER', 'PSYCHOLOGIST']
+      roles: ['BRIGADIER_GENERAL_PRINCIPAL', 'DOCENTE', 'PSYCHOLOGIST']
     },
     { 
       title: 'Asistencia Scann', 
       href: '/dashboard/attendance', 
       icon: UserCheck2,
-      roles: ['PROFESSOR_ADMIN', 'GENERAL_BRIGADIER', 'SUB_BRIGADIER']
+      roles: ['BRIGADIER_GENERAL_ALTERNO', 'BRIGADIER_GENERAL_PRINCIPAL', 'DOCENTE']
     },
     { 
       title: 'Incidencias', 
       href: '/dashboard/incidents', 
       icon: ClipboardList,
-      roles: ['PROFESSOR_ADMIN', 'GENERAL_BRIGADIER', 'SUB_BRIGADIER', 'PATROL_BRIGADIER', 'PSYCHOLOGIST']
+      roles: ['BRIGADIER_AULA', 'BRIGADIER_PATRULLA', 'BRIGADIER_GENERAL_ALTERNO', 'BRIGADIER_GENERAL_PRINCIPAL', 'DOCENTE', 'PSYCHOLOGIST']
     },
-    { 
-      title: 'Psicología', 
-      href: '/dashboard/psychology', 
+    {
+      title: 'Psicología',
+      href: '/dashboard/psychology',
       icon: BrainCircuit,
-      roles: ['PROFESSOR_ADMIN', 'PSYCHOLOGIST']
+      roles: ['PSYCHOLOGIST']
     },
-    { 
-      title: 'Admin Usuarios', 
+    {
+      title: 'Estudiantes DB',
+      href: '/dashboard/students',
+      icon: GraduationCap,
+      roles: ['BRIGADIER_GENERAL_PRINCIPAL', 'DOCENTE']
+    },
+    {
+      title: 'Reporte Asistencias',
+      href: '/dashboard/attendance-report',
+      icon: CalendarDays,
+      roles: ['BRIGADIER_AULA', 'BRIGADIER_PATRULLA', 'BRIGADIER_GENERAL_ALTERNO', 'BRIGADIER_GENERAL_PRINCIPAL', 'DOCENTE']
+    },
+    {
+      title: 'Grados y Secciones',
+      href: '/dashboard/sections',
+      icon: ListTree,
+      roles: ['BRIGADIER_GENERAL_PRINCIPAL', 'DOCENTE']
+    },
+    {
+      title: 'Admin Usuarios',
       href: '/dashboard/admin', 
       icon: Users,
-      roles: ['PROFESSOR_ADMIN', 'GENERAL_BRIGADIER']
+      roles: ['BRIGADIER_GENERAL_PRINCIPAL', 'DOCENTE']
     },
     { 
         title: 'Reportes', 
         href: '/dashboard/reports', 
         icon: PieChart,
-        roles: ['PROFESSOR_ADMIN', 'GENERAL_BRIGADIER']
+        roles: ['BRIGADIER_GENERAL_PRINCIPAL', 'DOCENTE']
       },
   ];
 
@@ -106,7 +126,7 @@ export function Sidebar() {
           </div>
         </div>
 
-        <div className='flex-1 overflow-y-auto py-6 px-4'>
+        <div className='flex-1 overflow-y-auto py-6 px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]'>
              <div className='bg-slate-800/50 rounded-xl p-4 mb-8 border border-slate-700/50 ring-1 ring-inset ring-white/5'>
                 <div className='flex items-center gap-3 mb-3'>
                     <div className='w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md'>

@@ -16,7 +16,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (dni.length < 8) {
-      toast.error('El DNI debe tener 8 dígitos');
+      toast.error('El DNI debe tener 8 dÃ­gitos');
       return;
     }
     
@@ -25,7 +25,7 @@ export default function LoginPage() {
        await login(dni, password);
        // Login success handles redirect in context
     } catch (error) {
-       toast.error('Error al iniciar sesión');
+       toast.error('Error al iniciar sesiÃ³n');
     } finally {
        setIsLoading(false);
     }
@@ -52,7 +52,7 @@ export default function LoginPage() {
           </motion.div>
           
           <h1 className='relative z-10 text-3xl font-bold text-white mb-2 tracking-tight'>BrigadApp</h1>
-          <p className='relative z-10 text-indigo-200 text-sm font-medium'>Control y Gestión Escolar</p>
+          <p className='relative z-10 text-indigo-200 text-sm font-medium'>Control y GestiÃ³n Escolar</p>
         </div>
 
         <div className='p-8 pt-10'>
@@ -73,13 +73,13 @@ export default function LoginPage() {
             </div>
 
             <div className='space-y-1.5'>
-              <label className='text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1'>Contraseña</label>
+              <label className='text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1'>ContraseÃ±a</label>
               <div className='relative group'>
                 <Lock className='absolute left-4 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors' />
                 <input 
                   type='password' 
                   className='w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-slate-900 font-medium'
-                  placeholder='••••••••'
+                  placeholder='Â•Â•Â•Â•Â•Â•Â•Â•'
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
