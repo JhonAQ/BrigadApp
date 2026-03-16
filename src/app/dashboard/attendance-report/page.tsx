@@ -156,18 +156,38 @@ export default function AttendanceReportPage() {
 
   const exportExcel = () => {
     const dayHeaders = daysInRange.map((day) => format(day, "dd/MM"));
-    const userMap = users.reduce((acc, u) => {
-      const userAtt = attendances.filter((a) => a.user_id === u.id);
-      acc[u.id] = {
-        total: userAtt.length,
-        punctual: userAtt.filter((a) => a.on_time).length,
-        uniformComplete: userAtt.filter((a) => a.uniform_complete).length,
-      };
-      return acc;
-    }, {} as Record<string, { total: number; punctual: number; uniformComplete: number }>);
+    const summaryHeaders = [
+      "Total",
+      "Puntuales",
+      "Tardanzas",
+      "Uniforme C",
+      "Uniforme I",
+    ];
+    const userMap = users.reduce(
+      (acc, u) => {
+        const userAtt = attendances.filter((a) => a.user_id === u.id);
+        acc[u.id] = {
+          total: userAtt.length,
+          punctual: userAtt.filter((a) => a.on_time).length,
+          uniformComplete: userAtt.filter((a) => a.uniform_complete).length,
+        };
+        return acc;
+      },
+      {} as Record<
+        string,
+        { total: number; punctual: number; uniformComplete: number }
+      >,
+    );
 
     const aoa: any[][] = [];
-    const titleCols = 8 + dayHeaders.length;
+    const headerRowValues = [
+      "Brigadier",
+      "DNI",
+      "Rol",
+      ...dayHeaders,
+      ...summaryHeaders,
+    ];
+    const titleCols = headerRowValues.length - 1;
     aoa.push([`Reporte de Asistencia - ${periodLabel}`]);
     aoa.push([
       `Vista: ${viewMode.toUpperCase()}`,
@@ -175,17 +195,7 @@ export default function AttendanceReportPage() {
     ]);
     aoa.push([]);
 
-    aoa.push([
-      "Brigadier",
-      "DNI",
-      "Rol",
-      "Total",
-      "Puntuales",
-      "Tardanzas",
-      "Uniforme C",
-      "Uniforme I",
-      ...dayHeaders,
-    ]);
+    aoa.push(headerRowValues);
 
     users.forEach((user) => {
       const metrics = userMap[user.id] || {
@@ -196,16 +206,7 @@ export default function AttendanceReportPage() {
       const tardy = metrics.total - metrics.punctual;
       const uniformIncomplete = metrics.total - metrics.uniformComplete;
 
-      const row = [
-        user.name,
-        user.dni || "",
-        user.role,
-        metrics.total,
-        metrics.punctual,
-        tardy,
-        metrics.uniformComplete,
-        uniformIncomplete,
-      ];
+      const row = [user.name, user.dni || "", user.role];
 
       daysInRange.forEach((day) => {
         const att = getAttendanceForUserAndDay(user.id, day);
@@ -217,6 +218,12 @@ export default function AttendanceReportPage() {
         const uniform = att.uniform_complete ? "C" : "I";
         row.push(`${status} / ${uniform}`);
       });
+
+      row.push(metrics.total);
+      row.push(metrics.punctual);
+      row.push(tardy);
+      row.push(metrics.uniformComplete);
+      row.push(uniformIncomplete);
 
       aoa.push(row);
     });
@@ -246,12 +253,12 @@ export default function AttendanceReportPage() {
       { wch: 28 }, // Brigadier
       { wch: 14 }, // DNI
       { wch: 18 }, // Rol
+      ...dayHeaders.map(() => ({ wch: 8 })), // días más angostos
       { wch: 10 }, // Total
-      { wch: 12 }, // Puntuales
-      { wch: 12 }, // Tardanzas
-      { wch: 14 }, // Uniforme C
-      { wch: 14 }, // Uniforme I
-      ...dayHeaders.map(() => ({ wch: 11 })),
+      { wch: 10 }, // Puntuales
+      { wch: 10 }, // Tardanzas
+      { wch: 12 }, // Uniforme C
+      { wch: 12 }, // Uniforme I
     ];
 
     // Style title and meta
@@ -300,9 +307,12 @@ export default function AttendanceReportPage() {
       for (let c = 0; c <= titleCols; c++) {
         const ref = `${letters[c]}${r}`;
         if (!ws[ref]) continue;
-        const isSummaryCol = c >= 3 && c <= 7;
+        const isSummaryCol = c >= 3 + dayHeaders.length;
         applyStyle(ref, {
-          alignment: { horizontal: c < 3 ? "left" : "center", vertical: "center" },
+          alignment: {
+            horizontal: c < 3 ? "left" : "center",
+            vertical: "center",
+          },
           border: borderThin,
           fill: isSummaryCol ? summaryFill : undefined,
           font: { color: { rgb: "0F172A" } },
