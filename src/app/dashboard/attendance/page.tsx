@@ -5,25 +5,12 @@ import Webcam from "react-webcam";
 import jsQR from "jsqr";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import {
-  Camera,
-  QrCode,
-  CheckCircle2,
-  XCircle,
-  RefreshCw,
-  Settings,
-  FileText,
-  Download,
-  Clock,
-} from "lucide-react";
+import { Camera, QrCode, CheckCircle2, XCircle, RefreshCw, Settings, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import * as XLSX from "xlsx";
 
 export default function AttendancePage() {
-  const [activeTab, setActiveTab] = useState<"scanner" | "config" | "reports">(
-    "scanner",
-  );
+  const [activeTab, setActiveTab] = useState<"scanner" | "config">("scanner");
 
   // Scanner State
   const webcamRef = useRef<Webcam>(null);
@@ -35,12 +22,26 @@ export default function AttendancePage() {
   const [limitTime, setLimitTime] = useState("08:00");
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
-  // Reports State
-  const [reportMonth, setReportMonth] = useState(
-    new Date().toISOString().slice(0, 7),
-  ); // YYYY-MM
-  const [reports, setReports] = useState<any[]>([]);
-  const [loadingReports, setLoadingReports] = useState(false);
+  const isUuid = (value: string) =>
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(
+      value,
+    );
+
+  const decodeQr = (qrData: string) => {
+    try {
+      const parsed = JSON.parse(qrData);
+      if (parsed && typeof parsed === "object") {
+        const dniCandidate = parsed.dni || parsed.id;
+        const uuidCandidate = parsed.id && isUuid(parsed.id) ? parsed.id : null;
+        return { dni: dniCandidate, uuid: uuidCandidate };
+      }
+    } catch (err) {
+      /* ignore parse errors */
+    }
+
+    const uuidCandidate = isUuid(qrData) ? qrData : null;
+    return { dni: qrData, uuid: uuidCandidate };
+  };
 
   // Load Settings
   const fetchSettings = async () => {
@@ -63,16 +64,36 @@ export default function AttendancePage() {
       setIsScanning(false);
       toast.loading("Verificando identidad...", { id: "verifyQr" });
 
+      const decoded = decodeQr(qrData);
+
       // Buscar el usuario
-      const { data: user, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", qrData)
-        .single();
+      let user = null;
+      let error = null as any;
+
+      if (decoded.uuid) {
+        const { data, error: err } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", decoded.uuid)
+          .single();
+        user = data;
+        error = err;
+      }
+
+      if ((!user || error) && decoded.dni) {
+        const { data, error: err } = await supabase
+          .from("users")
+          .select("*")
+          .eq("dni", decoded.dni)
+          .single();
+        user = data;
+        error = err;
+      }
 
       if (error || !user) {
         toast.dismiss("verifyQr");
         toast.error("QR no válido o usuario no encontrado.");
+        setScannedUser(null);
         setTimeout(() => setIsScanning(true), 2000);
         return;
       }
@@ -88,7 +109,7 @@ export default function AttendancePage() {
 
       toast.dismiss("verifyQr");
       toast.success("¡Identidad verificada!");
-      setScannedUser({ ...user, isLate });
+      setScannedUser({ ...user, isLate, scannedAt: now });
     },
     [isScanning, limitTime],
   );
@@ -174,61 +195,6 @@ export default function AttendancePage() {
     setIsSavingConfig(false);
   };
 
-  // --------------- Reports Actions ---------------
-  const loadReports = async () => {
-    setLoadingReports(true);
-
-    const [year, month] = reportMonth.split("-");
-    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
-
-    const { data, error } = await supabase
-      .from("attendance")
-      .select("*, users(name, role, dni)")
-      .gte("date", `${reportMonth}-01`)
-      .lte("date", `${reportMonth}-${lastDay}`)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast.error("Error al cargar reportes");
-    } else {
-      setReports(data || []);
-    }
-    setLoadingReports(false);
-  };
-
-  useEffect(() => {
-    if (activeTab === "reports") {
-      loadReports();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reportMonth, activeTab]);
-
-  const exportExcel = () => {
-    if (reports.length === 0) {
-      toast.error("No hay datos para exportar");
-      return;
-    }
-
-    const dataToExport = reports.map((r) => ({
-      Usuario: r.users?.name || "Desconocido",
-      Rol: r.users?.role || "N/A",
-      DNI: r.users?.dni || "N/A",
-      Fecha: r.date,
-      Hora: new Date(r.created_at).toLocaleTimeString("en-US", {
-        hour12: true,
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      Uniforme: r.uniform_complete ? "Completo" : "Incompleto",
-      Puntualidad: r.on_time ? "Puntual" : "Tardanza",
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Asistencia");
-    XLSX.writeFile(wb, `Reporte_Asistencia_${reportMonth}.xlsx`);
-  };
-
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Header & Tabs */}
@@ -244,12 +210,6 @@ export default function AttendancePage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "scanner" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"}`}
           >
             <Camera className="w-4 h-4" /> Escáner
-          </button>
-          <button
-            onClick={() => setActiveTab("reports")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "reports" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"}`}
-          >
-            <FileText className="w-4 h-4" /> Reportes
           </button>
           <button
             onClick={() => setActiveTab("config")}
@@ -339,7 +299,7 @@ export default function AttendancePage() {
                     </span>
                   </div>
                 </motion.div>
-              ) : (
+              ) : scannedUser ? (
                 /* Success View */
                 <motion.div
                   key="result"
@@ -368,11 +328,14 @@ export default function AttendancePage() {
                         Hora Escaneada
                       </p>
                       <p className="font-bold text-slate-700 text-lg">
-                        {new Date().toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}
+                        {new Date(scannedUser.scannedAt || Date.now()).toLocaleTimeString(
+                          "en-US",
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: true,
+                          },
+                        )}
                       </p>
                     </div>
                     <div
@@ -413,6 +376,27 @@ export default function AttendancePage() {
                       </Button>
                     </div>
                   </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="no-data"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl m-4 text-center relative z-20"
+                >
+                  <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-lg -mt-16">
+                    <XCircle className="w-12 h-12 text-red-500" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">
+                    No se pudo leer el QR
+                  </h3>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Acerca el carnet e intenta nuevamente.
+                  </p>
+                  <Button onClick={resetScan} variant="secondary">
+                    Intentar otra vez
+                  </Button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -465,119 +449,6 @@ export default function AttendancePage() {
           </div>
         )}
 
-        {/* TAB: REPORTES */}
-        {activeTab === "reports" && (
-          <div className="p-6 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold text-slate-800">
-                  Reporte Mensual
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Visualiza y descarga la asistencia.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <input
-                  type="month"
-                  value={reportMonth}
-                  onChange={(e) => setReportMonth(e.target.value)}
-                  className="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 font-medium"
-                />
-                <Button
-                  onClick={exportExcel}
-                  disabled={loadingReports || reports.length === 0}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Descargar Excel
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-slate-500 uppercase bg-slate-50 sticky top-0 z-10 shadow-sm">
-                  <tr>
-                    <th className="px-6 py-4">Usuario</th>
-                    <th className="px-6 py-4">Rol</th>
-                    <th className="px-6 py-4">Fecha y Hora</th>
-                    <th className="px-6 py-4">Uniforme</th>
-                    <th className="px-6 py-4 text-right">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loadingReports ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center py-8 text-slate-400"
-                      >
-                        <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 opacity-50" />{" "}
-                        Caragando datos...
-                      </td>
-                    </tr>
-                  ) : reports.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center py-8 text-slate-400"
-                      >
-                        No se encontraron registros para este mes.
-                      </td>
-                    </tr>
-                  ) : (
-                    reports.map((row) => (
-                      <tr
-                        key={row.id}
-                        className="bg-white border-b border-slate-100 hover:bg-slate-50/50"
-                      >
-                        <td className="px-6 py-4 font-semibold text-slate-800">
-                          {row.users?.name || "Desconocido"}
-                        </td>
-                        <td className="px-6 py-4 text-slate-500">
-                          {row.users?.role || "-"}
-                        </td>
-                        <td className="px-6 py-4 text-slate-600 font-medium">
-                          {row.date}{" "}
-                          <span className="text-slate-400 ml-1">
-                            {new Date(row.created_at).toLocaleTimeString(
-                              "en-US",
-                              {
-                                hour12: true,
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              },
-                            )}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {row.uniform_complete ? (
-                            <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Completo
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 py-1 px-2.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                              <XCircle className="w-3.5 h-3.5" /> Incompleto
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-right font-bold">
-                          {row.on_time ? (
-                            <span className="text-emerald-600">Puntual</span>
-                          ) : (
-                            <span className="text-red-500">Tardanza</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
