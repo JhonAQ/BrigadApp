@@ -327,10 +327,7 @@ export default function ReportsPresentationArgsPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: any) => [
-                      `${value} casos`,
-                      "Frecuencia",
-                    ]}
+                    formatter={(value: any) => [`${value} casos`, "Frecuencia"]}
                   />
                   <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
