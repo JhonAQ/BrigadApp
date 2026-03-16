@@ -5,7 +5,15 @@ import Webcam from "react-webcam";
 import jsQR from "jsqr";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Camera, QrCode, CheckCircle2, XCircle, RefreshCw, Settings, Clock } from "lucide-react";
+import {
+  Camera,
+  QrCode,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Settings,
+  Clock,
+} from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -328,14 +336,13 @@ export default function AttendancePage() {
                         Hora Escaneada
                       </p>
                       <p className="font-bold text-slate-700 text-lg">
-                        {new Date(scannedUser.scannedAt || Date.now()).toLocaleTimeString(
-                          "en-US",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
-                          },
-                        )}
+                        {new Date(
+                          scannedUser.scannedAt || Date.now(),
+                        ).toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}
                       </p>
                     </div>
                     <div
@@ -448,7 +455,6 @@ export default function AttendancePage() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

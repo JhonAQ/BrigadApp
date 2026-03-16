@@ -3,6 +3,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
+// xlsx-js-style permite estilos en el export
+import * as XLSX from "xlsx-js-style";
+
+type CellStyle = any;
 import {
   Download,
   CalendarDays,
@@ -32,9 +36,7 @@ export default function AttendanceReportPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [relationTried, setRelationTried] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"month" | "week" | "day">(
-    "month",
-  );
+  const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
 
   useEffect(() => {
     fetchData();
@@ -78,7 +80,7 @@ export default function AttendanceReportPage() {
         .from("attendance")
         .select(
           `id,date,created_at,uniform_complete,on_time,user_id,
-          user:users!${relation}(id,name,dni,role)`
+          user:users!${relation}(id,name,dni,role)`,
         )
         .gte("date", range.start)
         .lte("date", range.end);
@@ -87,7 +89,10 @@ export default function AttendanceReportPage() {
     let { data: attData, error } = await fetchWithRelation(relation);
 
     if (error && error.code === "PGRST201") {
-      relation = relation === "attendance_user_id_fkey" ? "fk_attendance_user_id" : relation;
+      relation =
+        relation === "attendance_user_id_fkey"
+          ? "fk_attendance_user_id"
+          : relation;
       setRelationTried(relation);
       const retry = await fetchWithRelation(relation);
       attData = retry.data;
@@ -134,7 +139,9 @@ export default function AttendanceReportPage() {
     return attendances.find((a) => {
       const dateStr = a.date || a.scanned_at || a.created_at;
       if (!dateStr) return false;
-      const parsed = parseISO(typeof dateStr === "string" ? dateStr : new Date(dateStr).toISOString());
+      const parsed = parseISO(
+        typeof dateStr === "string" ? dateStr : new Date(dateStr).toISOString(),
+      );
       return a.user_id === userId && isSameDay(parsed, day);
     });
   };
@@ -147,39 +154,169 @@ export default function AttendanceReportPage() {
     return { total, punctual, late, uniformOk };
   }, [attendances]);
 
-  const generateCSV = () => {
-    // Generar cabeceras
-    let csvContent = "Brigadier,DNI,Rol,";
-    daysInRange.forEach((day) => {
-      csvContent += `${format(day, "dd/MM")},`;
-    });
-    csvContent += "\n";
+  const exportExcel = () => {
+    const dayHeaders = daysInRange.map((day) => format(day, "dd/MM"));
+    const userMap = users.reduce((acc, u) => {
+      const userAtt = attendances.filter((a) => a.user_id === u.id);
+      acc[u.id] = {
+        total: userAtt.length,
+        punctual: userAtt.filter((a) => a.on_time).length,
+        uniformComplete: userAtt.filter((a) => a.uniform_complete).length,
+      };
+      return acc;
+    }, {} as Record<string, { total: number; punctual: number; uniformComplete: number }>);
 
-    // Generar filas
+    const aoa: any[][] = [];
+    const titleCols = 8 + dayHeaders.length;
+    aoa.push([`Reporte de Asistencia - ${periodLabel}`]);
+    aoa.push([
+      `Vista: ${viewMode.toUpperCase()}`,
+      `Generado: ${new Date().toLocaleString("es-PE")}`,
+    ]);
+    aoa.push([]);
+
+    aoa.push([
+      "Brigadier",
+      "DNI",
+      "Rol",
+      "Total",
+      "Puntuales",
+      "Tardanzas",
+      "Uniforme C",
+      "Uniforme I",
+      ...dayHeaders,
+    ]);
+
     users.forEach((user) => {
-      csvContent += `"${user.name}","${user.dni || ""}","${user.role}",`;
+      const metrics = userMap[user.id] || {
+        total: 0,
+        punctual: 0,
+        uniformComplete: 0,
+      };
+      const tardy = metrics.total - metrics.punctual;
+      const uniformIncomplete = metrics.total - metrics.uniformComplete;
+
+      const row = [
+        user.name,
+        user.dni || "",
+        user.role,
+        metrics.total,
+        metrics.punctual,
+        tardy,
+        metrics.uniformComplete,
+        uniformIncomplete,
+      ];
 
       daysInRange.forEach((day) => {
         const att = getAttendanceForUserAndDay(user.id, day);
-        const status = att
-          ? `${att.on_time ? "A" : "T"}-${att.uniform_complete ? "C" : "I"}`
-          : "-";
-        csvContent += `${status},`;
+        if (!att) {
+          row.push("-");
+          return;
+        }
+        const status = att.on_time ? "A" : "T";
+        const uniform = att.uniform_complete ? "C" : "I";
+        row.push(`${status} / ${uniform}`);
       });
-      csvContent += "\n";
+
+      aoa.push(row);
     });
 
-    const blob = new Blob(["\uFEFF" + csvContent], {
-      type: "text/csv;charset=utf-8;",
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    const headerFill = { patternType: "solid", fgColor: { rgb: "EEF2FF" } }; // Indigo-50
+    const summaryFill = { patternType: "solid", fgColor: { rgb: "ECFEFF" } }; // Cyan-50
+    const borderThin = {
+      top: { style: "thin", color: { rgb: "CBD5E1" } },
+      bottom: { style: "thin", color: { rgb: "CBD5E1" } },
+      left: { style: "thin", color: { rgb: "CBD5E1" } },
+      right: { style: "thin", color: { rgb: "CBD5E1" } },
+    };
+
+    const applyStyle = (cellRef: string, style: CellStyle) => {
+      if (ws[cellRef]) {
+        ws[cellRef].s = style;
+      }
+    };
+
+    // Merge title row
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: titleCols } }];
+
+    // Column widths
+    ws["!cols"] = [
+      { wch: 28 }, // Brigadier
+      { wch: 14 }, // DNI
+      { wch: 18 }, // Rol
+      { wch: 10 }, // Total
+      { wch: 12 }, // Puntuales
+      { wch: 12 }, // Tardanzas
+      { wch: 14 }, // Uniforme C
+      { wch: 14 }, // Uniforme I
+      ...dayHeaders.map(() => ({ wch: 11 })),
+    ];
+
+    // Style title and meta
+    applyStyle("A1", {
+      font: { bold: true, sz: 14, color: { rgb: "1F2937" } },
+      alignment: { horizontal: "left", vertical: "center" },
     });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    applyStyle("A2", {
+      font: { bold: true, color: { rgb: "4B5563" } },
+      alignment: { horizontal: "left" },
+    });
+    applyStyle("B2", {
+      font: { color: { rgb: "4B5563" } },
+      alignment: { horizontal: "left" },
+    });
+
+    // Header row styles (row 4, zero-indexed r=3)
+    const headerRow = 4;
+    const colLetters = (count: number) => {
+      const res: string[] = [];
+      for (let i = 0; i < count; i++) {
+        let n = i;
+        let s = "";
+        while (n >= 0) {
+          s = String.fromCharCode((n % 26) + 65) + s;
+          n = Math.floor(n / 26) - 1;
+        }
+        res.push(s);
+      }
+      return res;
+    };
+    const letters = colLetters(titleCols + 1);
+    for (let c = 0; c <= titleCols; c++) {
+      const ref = `${letters[c]}${headerRow}`;
+      applyStyle(ref, {
+        font: { bold: true, color: { rgb: "1F2937" } },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        fill: headerFill,
+        border: borderThin,
+      });
+    }
+
+    // Data rows styles
+    const startDataRow = headerRow + 1;
+    for (let r = startDataRow; r < aoa.length + 1; r++) {
+      for (let c = 0; c <= titleCols; c++) {
+        const ref = `${letters[c]}${r}`;
+        if (!ws[ref]) continue;
+        const isSummaryCol = c >= 3 && c <= 7;
+        applyStyle(ref, {
+          alignment: { horizontal: c < 3 ? "left" : "center", vertical: "center" },
+          border: borderThin,
+          fill: isSummaryCol ? summaryFill : undefined,
+          font: { color: { rgb: "0F172A" } },
+        });
+      }
+    }
+
+    // Freeze header row and first column
+    ws["!freeze"] = { c: 1, r: headerRow };
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Asistencia");
     const safeLabel = periodLabel.replace(/\s+/g, "_");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Rep_Asistencias_${viewMode}_${safeLabel}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    XLSX.writeFile(wb, `Reporte_Asistencia_${viewMode}_${safeLabel}.xlsx`);
   };
 
   const periodLabel = useMemo(() => {
@@ -223,50 +360,52 @@ export default function AttendanceReportPage() {
           </div>
 
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-1">
-            <button
-              onClick={goPrev}
-              className="p-1 hover:bg-slate-100 rounded"
-            >
+            <button onClick={goPrev} className="p-1 hover:bg-slate-100 rounded">
               <ChevronLeft className="w-5 h-5 text-slate-600" />
             </button>
             <span className="min-w-[140px] text-center font-medium text-slate-700 capitalize px-2">
               {periodLabel}
             </span>
-            <button
-              onClick={goNext}
-              className="p-1 hover:bg-slate-100 rounded"
-            >
+            <button onClick={goNext} className="p-1 hover:bg-slate-100 rounded">
               <ChevronRight className="w-5 h-5 text-slate-600" />
             </button>
           </div>
 
           <Button
-            onClick={generateCSV}
+            onClick={exportExcel}
             variant="primary"
             className="bg-emerald-600 hover:bg-emerald-700 text-slate-900 flex items-center gap-2 px-4 py-2 rounded-lg"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden md:inline">Descargar CSV</span>
+            <span className="hidden md:inline">Descargar Excel</span>
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="p-4 rounded-xl border border-slate-100 bg-slate-50">
-          <p className="text-xs text-slate-500 font-semibold">Total registros</p>
+          <p className="text-xs text-slate-500 font-semibold">
+            Total registros
+          </p>
           <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
         </div>
         <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50">
           <p className="text-xs text-emerald-600 font-semibold">Puntuales</p>
-          <p className="text-2xl font-bold text-emerald-700">{stats.punctual}</p>
+          <p className="text-2xl font-bold text-emerald-700">
+            {stats.punctual}
+          </p>
         </div>
         <div className="p-4 rounded-xl border border-red-100 bg-red-50">
           <p className="text-xs text-red-600 font-semibold">Tardanzas</p>
           <p className="text-2xl font-bold text-red-700">{stats.late}</p>
         </div>
         <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50">
-          <p className="text-xs text-indigo-600 font-semibold">Uniforme completo</p>
-          <p className="text-2xl font-bold text-indigo-700">{stats.uniformOk}</p>
+          <p className="text-xs text-indigo-600 font-semibold">
+            Uniforme completo
+          </p>
+          <p className="text-2xl font-bold text-indigo-700">
+            {stats.uniformOk}
+          </p>
         </div>
       </div>
 
@@ -349,7 +488,11 @@ export default function AttendanceReportPage() {
                                       ? "bg-indigo-100 text-indigo-700"
                                       : "bg-red-100 text-red-700"
                                   }`}
-                                  title={att.uniform_complete ? "Uniforme completo" : "Uniforme incompleto"}
+                                  title={
+                                    att.uniform_complete
+                                      ? "Uniforme completo"
+                                      : "Uniforme incompleto"
+                                  }
                                 >
                                   {att.uniform_complete ? "C" : "I"}
                                 </div>
