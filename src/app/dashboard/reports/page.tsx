@@ -236,7 +236,8 @@ export default function ReportsPresentationArgsPage() {
     });
 
     const brigadierList = Object.values(brigadierMap).map((b: any) => {
-      const punctuality = b.attendance > 0 ? (b.onTime / b.attendance) * 100 : 0;
+      const punctuality =
+        b.attendance > 0 ? (b.onTime / b.attendance) * 100 : 0;
       const uniformRate =
         b.attendance > 0 ? (b.uniformOk / b.attendance) * 100 : 0;
       const incidentEffectiveness =
@@ -275,15 +276,19 @@ export default function ReportsPresentationArgsPage() {
     const avgPunctuality =
       brigadierList.length > 0
         ? Math.round(
-            brigadierList.reduce((sum: number, b: any) => sum + b.punctuality, 0) /
-              brigadierList.length,
+            brigadierList.reduce(
+              (sum: number, b: any) => sum + b.punctuality,
+              0,
+            ) / brigadierList.length,
           )
         : 0;
     const avgUniform =
       brigadierList.length > 0
         ? Math.round(
-            brigadierList.reduce((sum: number, b: any) => sum + b.uniformRate, 0) /
-              brigadierList.length,
+            brigadierList.reduce(
+              (sum: number, b: any) => sum + b.uniformRate,
+              0,
+            ) / brigadierList.length,
           )
         : 0;
     const avgIncidentEffectiveness =
@@ -349,9 +354,11 @@ export default function ReportsPresentationArgsPage() {
   };
 
   useEffect(() => {
-    const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    const handleFsChange = () =>
+      setIsFullscreen(Boolean(document.fullscreenElement));
     document.addEventListener("fullscreenchange", handleFsChange);
-    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFsChange);
   }, []);
 
   // Slides rendering definitions
@@ -602,18 +609,26 @@ export default function ReportsPresentationArgsPage() {
                   </div>
                 </div>
                 <p className="text-amber-800/90 font-medium mb-4">
-                  Ordenados por puntaje ponderado: 40% puntualidad, 30%
-                  uniforme completo, 30% eficacia en incidentes.
+                  Ordenados por puntaje ponderado: 40% puntualidad, 30% uniforme
+                  completo, 30% eficacia en incidentes.
                 </p>
                 <ul className="text-sm text-amber-900/80 space-y-2 font-semibold">
-                  <li>Asistencia considerada: {stats.brigadierAverages.totalIncidentsManaged} incidentes gestionados en el mes.</li>
                   <li>
-                    Promedios del grupo: puntualidad {stats.brigadierAverages.avgPunctuality}% ·
-                    uniforme {stats.brigadierAverages.avgUniform}% · eficacia {stats.brigadierAverages.avgIncidentEffectiveness}%.
+                    Asistencia considerada:{" "}
+                    {stats.brigadierAverages.totalIncidentsManaged} incidentes
+                    gestionados en el mes.
+                  </li>
+                  <li>
+                    Promedios del grupo: puntualidad{" "}
+                    {stats.brigadierAverages.avgPunctuality}% · uniforme{" "}
+                    {stats.brigadierAverages.avgUniform}% · eficacia{" "}
+                    {stats.brigadierAverages.avgIncidentEffectiveness}%.
                   </li>
                   {stats.topBrigadiers.length < 3 ? (
                     <li className="text-amber-700 font-bold">
-                      Solo hay {stats.topBrigadiers.length} brigadiere(s) con asistencia/reportes registrados este mes; registra al resto para completar el top 3.
+                      Solo hay {stats.topBrigadiers.length} brigadiere(s) con
+                      asistencia/reportes registrados este mes; registra al
+                      resto para completar el top 3.
                     </li>
                   ) : null}
                 </ul>
@@ -627,8 +642,11 @@ export default function ReportsPresentationArgsPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 items-end">
                 {stats.topBrigadiers.map((b: any, idx: number) => {
                   const barHeight = 120 + (b.Score / maxScore) * 140;
-                  const medalColor = ["bg-amber-400", "bg-slate-300", "bg-amber-700"][idx] || "bg-slate-200";
-                  const placeLabel = ["1er", "2do", "3er"][idx] || `${idx + 1}°`;
+                  const medalColor =
+                    ["bg-amber-400", "bg-slate-300", "bg-amber-700"][idx] ||
+                    "bg-slate-200";
+                  const placeLabel =
+                    ["1er", "2do", "3er"][idx] || `${idx + 1}°`;
 
                   return (
                     <div
@@ -639,21 +657,39 @@ export default function ReportsPresentationArgsPage() {
                         className="w-full rounded-2xl bg-gradient-to-t from-amber-50 to-white border border-slate-100 shadow-inner px-3 pt-4 pb-3 flex flex-col items-center gap-2"
                         style={{ minHeight: barHeight }}
                       >
-                        <div className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest text-amber-950 ${medalColor}`}>
+                        <div
+                          className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest text-amber-950 ${medalColor}`}
+                        >
                           {placeLabel}
                         </div>
                         <p className="text-center text-base font-black text-slate-800 leading-tight">
                           {b.name}
                         </p>
-                        <p className="text-4xl font-black text-amber-600">{b.Score}</p>
+                        <p className="text-4xl font-black text-amber-600">
+                          {b.Score}
+                        </p>
                         <p className="text-xs font-semibold text-slate-500">
                           Puntaje ponderado
                         </p>
                         <div className="w-full text-xs text-slate-600 space-y-1">
-                          <div className="flex justify-between"><span>Puntualidad</span><span>{b.punctuality}%</span></div>
-                          <div className="flex justify-between"><span>Uniforme</span><span>{b.uniform}%</span></div>
-                          <div className="flex justify-between"><span>Eficacia</span><span>{b.incidentEffectiveness}%</span></div>
-                          <div className="flex justify-between"><span>Incidentes</span><span>{b.resolved}/{b.incidents}</span></div>
+                          <div className="flex justify-between">
+                            <span>Puntualidad</span>
+                            <span>{b.punctuality}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Uniforme</span>
+                            <span>{b.uniform}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Eficacia</span>
+                            <span>{b.incidentEffectiveness}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Incidentes</span>
+                            <span>
+                              {b.resolved}/{b.incidents}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -681,10 +717,10 @@ export default function ReportsPresentationArgsPage() {
         <h2 className="text-5xl font-black mb-6 relative z-10">
           Conclusiones y Acuerdos
         </h2>
-          <p className="text-xl text-indigo-200 max-w-2xl mx-auto mb-12 relative z-10 leading-relaxed">
-            Apertura de la mesa de debate directivo. Basados en la data
-            presentada, definir el plan de acción táctico para el próximo mes.
-          </p>
+        <p className="text-xl text-indigo-200 max-w-2xl mx-auto mb-12 relative z-10 leading-relaxed">
+          Apertura de la mesa de debate directivo. Basados en la data
+          presentada, definir el plan de acción táctico para el próximo mes.
+        </p>
 
         <div className="w-full max-w-3xl bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-left relative z-10">
           <ul className="list-disc list-inside space-y-3 text-lg font-medium text-indigo-50">
@@ -693,7 +729,10 @@ export default function ReportsPresentationArgsPage() {
                 <li key={idx}>{item}</li>
               ))
             ) : (
-              <li>Usa esta sección para anotar conclusiones, acuerdos y responsables.</li>
+              <li>
+                Usa esta sección para anotar conclusiones, acuerdos y
+                responsables.
+              </li>
             )}
           </ul>
         </div>
