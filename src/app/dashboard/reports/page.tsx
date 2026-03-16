@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
@@ -43,6 +43,7 @@ export default function ReportsPresentationArgsPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const presentationRef = useRef<HTMLDivElement>(null);
 
   // Data States
   const [monthName, setMonthName] = useState("");
@@ -57,6 +58,24 @@ export default function ReportsPresentationArgsPage() {
     "#f59e0b",
     "#ef4444",
   ];
+
+  const BrigadierTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || !payload.length) return null;
+    const data = payload[0].payload;
+
+    return (
+      <div className="bg-white border border-amber-100 rounded-xl p-3 shadow-lg text-sm text-slate-700">
+        <p className="font-bold text-amber-800 mb-1">{label}</p>
+        <p>Score: {data.Score} pts</p>
+        <p>Puntualidad: {data.punctuality}%</p>
+        <p>Uniforme completo: {data.uniform}%</p>
+        <p>
+          Eficacia incidentes: {data.incidentEffectiveness}% ({data.resolved}/
+          {data.incidents})
+        </p>
+      </div>
+    );
+  };
 
   useEffect(() => {
     fetchReportData();
@@ -76,24 +95,37 @@ export default function ReportsPresentationArgsPage() {
       const prevFirstDay = startOfMonth(subMonths(now, 1)).toISOString();
       const prevLastDay = endOfMonth(subMonths(now, 1)).toISOString();
 
-      // Obtener incidencias del mes actual
-      const { data: currentIncidents } = await supabase
-        .from("incidents")
-        .select(
-          "*, students(first_name, last_name, grade, section), users(name, role)",
-        )
-        .gte("date", firstDay.split("T")[0])
-        .lte("date", lastDay.split("T")[0]);
+      const [currentIncidentsRes, prevIncidentsRes, attendanceRes] =
+        await Promise.all([
+          supabase
+            .from("incidents")
+            .select(
+              `id,date,status,type,needs_psychology,student_id,reporter_id,
+              student:students!incidents_student_id_fkey(first_name,last_name,grade,section),
+              reporter:users!incidents_reporter_id_fkey(id,name,role)`,
+            )
+            .gte("date", firstDay.split("T")[0])
+            .lte("date", lastDay.split("T")[0]),
+          supabase
+            .from("incidents")
+            .select("id")
+            .gte("date", prevFirstDay.split("T")[0])
+            .lte("date", prevLastDay.split("T")[0]),
+          supabase
+            .from("attendance")
+            .select(
+              "id,date,on_time,uniform_complete,user_id,user:users!attendance_user_id_fkey(id,name,role)",
+            )
+            .gte("date", firstDay.split("T")[0])
+            .lte("date", lastDay.split("T")[0]),
+        ]);
 
-      // Incidencias del mes anterior (para comparación)
-      const { data: prevIncidents } = await supabase
-        .from("incidents")
-        .select("id")
-        .gte("date", prevFirstDay.split("T")[0])
-        .lte("date", prevLastDay.split("T")[0]);
-
-      if (currentIncidents) {
-        processData(currentIncidents, prevIncidents || []);
+      if (currentIncidentsRes.data) {
+        processData(
+          currentIncidentsRes.data,
+          prevIncidentsRes.data || [],
+          attendanceRes.data || [],
+        );
       }
     } catch (error) {
       console.error("Error fetching report data", error);
@@ -102,7 +134,7 @@ export default function ReportsPresentationArgsPage() {
     }
   };
 
-  const processData = (current: any[], prev: any[]) => {
+  const processData = (current: any[], prev: any[], attendance: any[]) => {
     // 1. KPIs Básicos
     const totalCurrent = current.length;
     const totalPrev = prev.length;
@@ -128,7 +160,7 @@ export default function ReportsPresentationArgsPage() {
 
     // 3. Casos por Grado (Para Bar Chart)
     const gradeCount = current.reduce((acc: any, inc) => {
-      const grade = inc.students?.grade || "Desconocido";
+      const grade = inc.student?.grade || "Desconocido";
       acc[grade] = (acc[grade] || 0) + 1;
       return acc;
     }, {});
@@ -141,12 +173,12 @@ export default function ReportsPresentationArgsPage() {
       const studentId = inc.student_id;
       if (!studentId) return acc;
       if (!acc[studentId]) {
-        const studentName = inc.students
-          ? `${inc.students.first_name} ${inc.students.last_name}`
+        const studentName = inc.student
+          ? `${inc.student.first_name} ${inc.student.last_name}`
           : "Desconocido";
         acc[studentId] = {
           name: studentName,
-          grade: `${inc.students?.grade} ${inc.students?.section}`,
+          grade: `${inc.student?.grade} ${inc.student?.section}`,
           count: 0,
         };
       }
@@ -157,16 +189,123 @@ export default function ReportsPresentationArgsPage() {
       .sort((a: any, b: any) => b.count - a.count)
       .slice(0, 5);
 
-    // 5. Ranking de Brigadieres (Top Reportadores)
-    const reporterCount = current.reduce((acc: any, inc) => {
-      const reporterName = inc.users?.name || "Desconocido";
-      acc[reporterName] = (acc[reporterName] || 0) + 1;
-      return acc;
-    }, {});
-    const topBrigadiers = Object.keys(reporterCount)
-      .map((k) => ({ name: k, Reportes: reporterCount[k] }))
-      .sort((a: any, b: any) => b.Reportes - a.Reportes)
-      .slice(0, 5);
+    // 5. Ranking de Brigadieres (puntualidad + uniforme + incidentes)
+    const brigadierRoles = ["BRIGADIER_AULA", "BRIGADIER_PATRULLA"];
+
+    const brigadierMap: Record<string, any> = {};
+
+    const ensureBrigadier = (id: string, name: string, role?: string) => {
+      if (!brigadierMap[id]) {
+        brigadierMap[id] = {
+          id,
+          name: name || "Desconocido",
+          role: role || "",
+          attendance: 0,
+          onTime: 0,
+          uniformOk: 0,
+          incidentsReported: 0,
+          incidentsResolved: 0,
+        };
+      }
+      return brigadierMap[id];
+    };
+
+    attendance
+      .filter((a) => brigadierRoles.includes(a.user?.role || ""))
+      .forEach((a) => {
+        if (!a.user_id) return;
+        const entry = ensureBrigadier(a.user_id, a.user?.name, a.user?.role);
+        entry.attendance += 1;
+        if (a.on_time) entry.onTime += 1;
+        if (a.uniform_complete) entry.uniformOk += 1;
+      });
+
+    current.forEach((inc) => {
+      if (!inc.reporter_id) return;
+      const reporterRole = inc.reporter?.role || "";
+      if (!brigadierRoles.includes(reporterRole)) return;
+      const entry = ensureBrigadier(
+        inc.reporter_id,
+        inc.reporter?.name,
+        reporterRole,
+      );
+      entry.incidentsReported += 1;
+      if (inc.status === "ATENDIDA" || inc.status === "RESUELTO") {
+        entry.incidentsResolved += 1;
+      }
+    });
+
+    const brigadierList = Object.values(brigadierMap).map((b: any) => {
+      const punctuality = b.attendance > 0 ? (b.onTime / b.attendance) * 100 : 0;
+      const uniformRate =
+        b.attendance > 0 ? (b.uniformOk / b.attendance) * 100 : 0;
+      const incidentEffectiveness =
+        b.incidentsReported > 0
+          ? (b.incidentsResolved / b.incidentsReported) * 100
+          : 0;
+      const score = Math.round(
+        punctuality * 0.4 + uniformRate * 0.3 + incidentEffectiveness * 0.3,
+      );
+
+      return {
+        ...b,
+        punctuality,
+        uniformRate,
+        incidentEffectiveness,
+        score,
+      };
+    });
+
+    const topBrigadiers = brigadierList
+      .sort(
+        (a: any, b: any) =>
+          b.score - a.score || b.incidentsResolved - a.incidentsResolved,
+      )
+      .slice(0, 3)
+      .map((b: any) => ({
+        name: b.name,
+        Score: b.score,
+        punctuality: Math.round(b.punctuality),
+        uniform: Math.round(b.uniformRate),
+        incidents: b.incidentsReported,
+        resolved: b.incidentsResolved,
+        incidentEffectiveness: Math.round(b.incidentEffectiveness),
+      }));
+
+    const avgPunctuality =
+      brigadierList.length > 0
+        ? Math.round(
+            brigadierList.reduce((sum: number, b: any) => sum + b.punctuality, 0) /
+              brigadierList.length,
+          )
+        : 0;
+    const avgUniform =
+      brigadierList.length > 0
+        ? Math.round(
+            brigadierList.reduce((sum: number, b: any) => sum + b.uniformRate, 0) /
+              brigadierList.length,
+          )
+        : 0;
+    const avgIncidentEffectiveness =
+      brigadierList.length > 0
+        ? Math.round(
+            brigadierList.reduce(
+              (sum: number, b: any) => sum + b.incidentEffectiveness,
+              0,
+            ) / brigadierList.length,
+          )
+        : 0;
+
+    const totalIncidentsManaged = brigadierList.reduce(
+      (sum: number, b: any) => sum + b.incidentsReported,
+      0,
+    );
+    const totalIncidentsResolved = brigadierList.reduce(
+      (sum: number, b: any) => sum + b.incidentsResolved,
+      0,
+    );
+
+    const conclusions: string[] = [];
 
     setStats({
       totalCurrent,
@@ -178,6 +317,14 @@ export default function ReportsPresentationArgsPage() {
       gradeChartData,
       topStudents,
       topBrigadiers,
+      brigadierAverages: {
+        avgPunctuality,
+        avgUniform,
+        avgIncidentEffectiveness,
+        totalIncidentsManaged,
+        totalIncidentsResolved,
+      },
+      conclusions,
     });
   };
 
@@ -193,16 +340,19 @@ export default function ReportsPresentationArgsPage() {
   }, [currentSlide]);
 
   const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement
-        .requestFullscreen()
-        .catch((err) => console.log(err));
-      setIsFullscreen(true);
-    } else {
+    const target = presentationRef.current;
+    if (!document.fullscreenElement && target) {
+      target.requestFullscreen().catch((err) => console.log(err));
+    } else if (document.fullscreenElement) {
       document.exitFullscreen();
-      setIsFullscreen(false);
     }
   };
+
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
 
   // Slides rendering definitions
   const SLIDES = [
@@ -424,54 +574,102 @@ export default function ReportsPresentationArgsPage() {
     ),
 
     // SLIDE 4: RENDIMIENTO BRIGADIERES
-    () => (
-      <div className="flex flex-col h-full p-8 md:p-12">
-        <h2 className="text-3xl font-black text-slate-800 mb-8 flex items-center gap-3 border-b pb-4">
-          <Award className="w-8 h-8 text-amber-500" /> Rendimiento de Patrullaje
-        </h2>
+    () => {
+      const maxScore = Math.max(
+        ...stats.topBrigadiers.map((b: any) => b.Score),
+        1,
+      );
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 flex-1">
-          <div className="md:col-span-1 bg-amber-50 rounded-3xl p-8 border border-amber-200 flex flex-col justify-center items-center text-center">
-            <Award className="w-32 h-32 text-amber-400 mb-6" />
-            <h3 className="text-2xl font-black text-amber-900 mb-2">
-              Brigadieres de Alto Impacto
-            </h3>
-            <p className="text-amber-700/80 font-medium">
-              Este ranking reconoce a los brigadieres con mayor nivel de reporte
-              proactivo y aseguramiento del orden mensual.
-            </p>
-          </div>
+      return (
+        <div className="flex flex-col h-full p-8 md:p-12">
+          <h2 className="text-3xl font-black text-slate-800 mb-8 flex items-center gap-3 border-b pb-4">
+            <Award className="w-8 h-8 text-amber-500" /> Rendimiento de
+            Patrullaje
+          </h2>
 
-          <div className="md:col-span-2 bg-white rounded-3xl p-8 border border-slate-200 shadow-lg">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={stats.topBrigadiers}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 12, fontWeight: "bold" }}
-                />
-                <YAxis allowDecimals={false} />
-                <Tooltip cursor={{ fill: "#f8fafc" }} />
-                <Bar
-                  dataKey="Reportes"
-                  fill="#f59e0b"
-                  radius={[8, 8, 0, 0]}
-                  barSize={60}
-                  label={{
-                    position: "top",
-                    fill: "#92400e",
-                    fontWeight: "bold",
-                  }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
+            <div className="bg-amber-50 rounded-3xl p-8 border border-amber-200 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <Award className="w-12 h-12 text-amber-400" />
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-amber-700/80">
+                      Ranking Mensual
+                    </p>
+                    <h3 className="text-2xl font-black text-amber-900">
+                      Podio de Brigadieres
+                    </h3>
+                  </div>
+                </div>
+                <p className="text-amber-800/90 font-medium mb-4">
+                  Ordenados por puntaje ponderado: 40% puntualidad, 30%
+                  uniforme completo, 30% eficacia en incidentes.
+                </p>
+                <ul className="text-sm text-amber-900/80 space-y-2 font-semibold">
+                  <li>Asistencia considerada: {stats.brigadierAverages.totalIncidentsManaged} incidentes gestionados en el mes.</li>
+                  <li>
+                    Promedios del grupo: puntualidad {stats.brigadierAverages.avgPunctuality}% ·
+                    uniforme {stats.brigadierAverages.avgUniform}% · eficacia {stats.brigadierAverages.avgIncidentEffectiveness}%.
+                  </li>
+                  {stats.topBrigadiers.length < 3 ? (
+                    <li className="text-amber-700 font-bold">
+                      Solo hay {stats.topBrigadiers.length} brigadiere(s) con asistencia/reportes registrados este mes; registra al resto para completar el top 3.
+                    </li>
+                  ) : null}
+                </ul>
+              </div>
+              <p className="text-xs text-amber-700/70 mt-6">
+                El puntaje final es la suma ponderada de cada métrica (0-100).
+              </p>
+            </div>
+
+            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg flex flex-col">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 items-end">
+                {stats.topBrigadiers.map((b: any, idx: number) => {
+                  const barHeight = 120 + (b.Score / maxScore) * 140;
+                  const medalColor = ["bg-amber-400", "bg-slate-300", "bg-amber-700"][idx] || "bg-slate-200";
+                  const placeLabel = ["1er", "2do", "3er"][idx] || `${idx + 1}°`;
+
+                  return (
+                    <div
+                      key={b.name + idx}
+                      className="flex flex-col items-center justify-end gap-3 h-full"
+                    >
+                      <div
+                        className="w-full rounded-2xl bg-gradient-to-t from-amber-50 to-white border border-slate-100 shadow-inner px-3 pt-4 pb-3 flex flex-col items-center gap-2"
+                        style={{ minHeight: barHeight }}
+                      >
+                        <div className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest text-amber-950 ${medalColor}`}>
+                          {placeLabel}
+                        </div>
+                        <p className="text-center text-base font-black text-slate-800 leading-tight">
+                          {b.name}
+                        </p>
+                        <p className="text-4xl font-black text-amber-600">{b.Score}</p>
+                        <p className="text-xs font-semibold text-slate-500">
+                          Puntaje ponderado
+                        </p>
+                        <div className="w-full text-xs text-slate-600 space-y-1">
+                          <div className="flex justify-between"><span>Puntualidad</span><span>{b.punctuality}%</span></div>
+                          <div className="flex justify-between"><span>Uniforme</span><span>{b.uniform}%</span></div>
+                          <div className="flex justify-between"><span>Eficacia</span><span>{b.incidentEffectiveness}%</span></div>
+                          <div className="flex justify-between"><span>Incidentes</span><span>{b.resolved}/{b.incidents}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {stats.topBrigadiers.length === 0 ? (
+                <div className="text-center text-slate-500 font-semibold py-10">
+                  Aún no hay datos de brigadieres este mes.
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
-    ),
+      );
+    },
 
     // SLIDE 5: DISCUSION Y PLAN
     () => (
@@ -483,25 +681,20 @@ export default function ReportsPresentationArgsPage() {
         <h2 className="text-5xl font-black mb-6 relative z-10">
           Conclusiones y Acuerdos
         </h2>
-        <p className="text-xl text-indigo-200 max-w-2xl mx-auto mb-12 relative z-10 leading-relaxed">
-          Apertura de la mesa de debate directivo. Basados en la data
-          presentada, definir el plan de acción táctico para el próximo mes.
-        </p>
+          <p className="text-xl text-indigo-200 max-w-2xl mx-auto mb-12 relative z-10 leading-relaxed">
+            Apertura de la mesa de debate directivo. Basados en la data
+            presentada, definir el plan de acción táctico para el próximo mes.
+          </p>
 
         <div className="w-full max-w-3xl bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 text-left relative z-10">
           <ul className="list-disc list-inside space-y-3 text-lg font-medium text-indigo-50">
-            <li>
-              ¿Qué infracción requiere nueva normativa o campaña de
-              concientización?
-            </li>
-            <li>
-              Revisión de estudiantes recurrentes con el departamento de
-              Psicología.
-            </li>
-            <li>
-              Reevaluación de zonas de patrullaje basándonos en los grados más
-              conflictivos.
-            </li>
+            {stats.conclusions?.length ? (
+              stats.conclusions.map((item: string, idx: number) => (
+                <li key={idx}>{item}</li>
+              ))
+            ) : (
+              <li>Usa esta sección para anotar conclusiones, acuerdos y responsables.</li>
+            )}
           </ul>
         </div>
       </div>
@@ -529,10 +722,17 @@ export default function ReportsPresentationArgsPage() {
 
   return (
     <div
-      className={`transition-all duration-300 ${isFullscreen ? "fixed inset-0 z-[100] bg-slate-900 p-4" : "h-[calc(100vh-100px)] min-h-[700px] bg-slate-100 rounded-3xl border border-slate-200 shadow-inner p-4 relative overflow-hidden flex flex-col"}`}
+      ref={presentationRef}
+      className={`transition-all duration-300 relative overflow-hidden flex flex-col ${
+        isFullscreen
+          ? "fixed inset-0 z-[120] bg-black"
+          : "h-[calc(100vh-100px)] min-h-[700px] bg-slate-100 rounded-3xl border border-slate-200 shadow-inner p-4"
+      }`}
     >
       {/* PANTALLA PRINCIPAL DE DIAPOSITIVAS */}
-      <div className="flex-1 bg-white rounded-2xl shadow-xl overflow-hidden relative">
+      <div
+        className={`flex-1 bg-white rounded-2xl shadow-xl overflow-hidden relative ${isFullscreen ? "m-8" : ""}`}
+      >
         {/* Barra de progreso */}
         <div className="absolute top-0 left-0 w-full h-1.5 bg-slate-100 z-50">
           <div
@@ -555,43 +755,74 @@ export default function ReportsPresentationArgsPage() {
         </AnimatePresence>
       </div>
 
-      {/* BARRA DE CONTROLES INFERIOR */}
-      <div className="shrink-0 mt-4 flex items-center justify-between bg-white px-6 py-4 rounded-2xl shadow-sm border border-slate-200">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={toggleFullscreen}
-            className="p-3 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors tooltip-trigger"
-            title="Pantalla Completa (F)"
-          >
-            {isFullscreen ? (
-              <Minimize className="w-5 h-5" />
-            ) : (
-              <Maximize className="w-5 h-5" />
-            )}
-          </button>
-          <div className="h-6 w-px bg-slate-200"></div>
-          <span className="text-sm font-bold text-slate-400 tracking-widest uppercase">
+      {/* BARRA DE CONTROLES INFERIOR / CONTROLES FLOTANTES */}
+      {isFullscreen ? (
+        <div className="absolute top-4 right-6 flex items-center gap-3 z-[130] text-white">
+          <div className="px-3 py-2 bg-white/10 rounded-full text-xs font-bold uppercase tracking-wide">
             Diapositiva {currentSlide + 1} de {SLIDES.length}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3">
+          </div>
           <button
             onClick={prevSlide}
             disabled={currentSlide === 0}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 disabled:hover:bg-slate-100 transition-colors"
+            className="p-3 rounded-full bg-white/15 backdrop-blur text-white hover:bg-white/25 disabled:opacity-30"
+            title="Anterior"
           >
-            <ChevronLeft className="w-5 h-5" /> Anterior
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={nextSlide}
             disabled={currentSlide === SLIDES.length - 1}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20 disabled:opacity-30 disabled:hover:bg-indigo-600 transition-all active:scale-95"
+            className="p-3 rounded-full bg-indigo-500/80 backdrop-blur text-white hover:bg-indigo-500 disabled:opacity-30"
+            title="Siguiente"
           >
-            Siguiente <ChevronRight className="w-5 h-5" />
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          <button
+            onClick={toggleFullscreen}
+            className="p-3 rounded-full bg-white/15 backdrop-blur text-white hover:bg-white/25"
+            title="Salir de pantalla completa"
+          >
+            <Minimize className="w-5 h-5" />
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="shrink-0 mt-4 flex items-center justify-between bg-white px-6 py-4 rounded-2xl shadow-sm border border-slate-200">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleFullscreen}
+              className="p-3 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors tooltip-trigger"
+              title="Pantalla Completa (F)"
+            >
+              {isFullscreen ? (
+                <Minimize className="w-5 h-5" />
+              ) : (
+                <Maximize className="w-5 h-5" />
+              )}
+            </button>
+            <div className="h-6 w-px bg-slate-200"></div>
+            <span className="text-sm font-bold text-slate-400 tracking-widest uppercase">
+              Diapositiva {currentSlide + 1} de {SLIDES.length}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={prevSlide}
+              disabled={currentSlide === 0}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 disabled:hover:bg-slate-100 transition-colors"
+            >
+              <ChevronLeft className="w-5 h-5" /> Anterior
+            </button>
+            <button
+              onClick={nextSlide}
+              disabled={currentSlide === SLIDES.length - 1}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20 disabled:opacity-30 disabled:hover:bg-indigo-600 transition-all active:scale-95"
+            >
+              Siguiente <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
