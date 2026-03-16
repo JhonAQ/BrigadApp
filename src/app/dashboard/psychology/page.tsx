@@ -24,7 +24,7 @@ import { toast } from "sonner";
 
 export default function PsychologyPage() {
   const { user } = useAuth();
-  const isPsych = user?.role === "PSYCHOLOGIST";
+  const isPsych = user?.role === "PSYCHOLOGIST" || user?.role === "DEVELOPER";
   const [activeTab, setActiveTab] = useState<"PENDIENTE" | "ATENDIDA">(
     "PENDIENTE",
   );

@@ -15,8 +15,8 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (dni.length < 8) {
-      toast.error('El DNI debe tener 8 dígitos');
+    if (dni.trim().length === 0) {
+      toast.error('Ingrese un Usuario, DNI o Correo válido');
       return;
     }
     
@@ -64,10 +64,10 @@ export default function LoginPage() {
                 <input 
                   type='text' 
                   className='w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-slate-900 font-medium'
-                  placeholder='Ingrese su DNI'
+                  placeholder='ID, Correo o DNI'
                   value={dni}
                   onChange={(e) => setDni(e.target.value)}
-                  maxLength={8}
+                  maxLength={100}
                 />
               </div>
             </div>
