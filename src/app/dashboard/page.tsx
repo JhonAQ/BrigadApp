@@ -27,7 +27,11 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    if (user?.role?.includes("BRIGADIER") || user?.role === "DOCENTE" || user?.role === "DEVELOPER") {
+    if (
+      user?.role?.includes("BRIGADIER") ||
+      user?.role === "DOCENTE" ||
+      user?.role === "DEVELOPER"
+    ) {
       fetchDashboardData();
     }
   }, [user]);
@@ -54,7 +58,9 @@ export default function DashboardPage() {
   if (!user) return null;
 
   const isPrivileged =
-    user.role.includes("BRIGADIER") || user.role === "DOCENTE" || user.role === "DEVELOPER";
+    user.role.includes("BRIGADIER") ||
+    user.role === "DOCENTE" ||
+    user.role === "DEVELOPER";
 
   return (
     <div className="flex flex-col h-full space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
@@ -218,7 +224,9 @@ export default function DashboardPage() {
                 />
               )}
 
-              {(user.role.includes("BRIGADIER") || user.role === "DOCENTE" || user.role === "DEVELOPER") && (
+              {(user.role.includes("BRIGADIER") ||
+                user.role === "DOCENTE" ||
+                user.role === "DEVELOPER") && (
                 <ModuleAction
                   title="Reporte de Asistencias"
                   desc="Registros diarios"
@@ -237,7 +245,8 @@ export default function DashboardPage() {
               )}
 
               {(user.role === "BRIGADIER_GENERAL_PRINCIPAL" ||
-                user.role === "DOCENTE" || user.role === "DEVELOPER") && (
+                user.role === "DOCENTE" ||
+                user.role === "DEVELOPER") && (
                 <ModuleAction
                   title="Administrar Usuarios"
                   desc="Mantenimiento de BD"

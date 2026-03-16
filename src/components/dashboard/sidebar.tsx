@@ -105,7 +105,9 @@ export function Sidebar() {
     },
   ];
 
-  const filteredItems = menuItems.filter((item) => item.roles.includes(role) || role === 'DEVELOPER');
+  const filteredItems = menuItems.filter(
+    (item) => item.roles.includes(role) || role === "DEVELOPER",
+  );
 
   return (
     <>
