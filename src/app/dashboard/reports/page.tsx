@@ -327,7 +327,7 @@ export default function ReportsPresentationArgsPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => [
+                    formatter={(value: any) => [
                       `${value} casos`,
                       "Frecuencia",
                     ]}

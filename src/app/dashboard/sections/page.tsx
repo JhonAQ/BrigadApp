@@ -219,7 +219,7 @@ export default function SectionsPage() {
               </div>
               <div className="flex justify-end space-x-3 pt-4 border-t">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   type="button"
                   onClick={() => {
                     setShowModal(false);
