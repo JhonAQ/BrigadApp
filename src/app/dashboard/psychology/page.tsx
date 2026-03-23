@@ -51,7 +51,7 @@ export default function PsychologyPage() {
   // Auto-save effect
   useEffect(() => {
     if (!selectedIncident) return;
-    
+
     // Don't save if notes haven't changed from original or it's the initial load
     if (debouncedNotes === selectedIncident.psych_notes) return;
 
@@ -65,17 +65,23 @@ export default function PsychologyPage() {
           .from("incidents")
           .update({ psych_notes: debouncedNotes })
           .eq("id", selectedIncident.id);
-        
+
         if (error) throw error;
-        
+
         setLastSaved(new Date());
         // Update local state to avoid re-triggering if no further changes
-        setSelectedIncident((prev: any) => ({ ...prev, psych_notes: debouncedNotes }));
-        // Update list state silently 
-        setIncidents((prev) => 
-          prev.map((inc) => inc.id === selectedIncident.id ? { ...inc, psych_notes: debouncedNotes } : inc)
+        setSelectedIncident((prev: any) => ({
+          ...prev,
+          psych_notes: debouncedNotes,
+        }));
+        // Update list state silently
+        setIncidents((prev) =>
+          prev.map((inc) =>
+            inc.id === selectedIncident.id
+              ? { ...inc, psych_notes: debouncedNotes }
+              : inc,
+          ),
         );
-
       } catch (error) {
         toast.error("Error guardando notas automáticamente");
       } finally {
@@ -86,7 +92,6 @@ export default function PsychologyPage() {
     saveNotes();
   }, [debouncedNotes]);
 
-
   const handleOpenCase = (incident: any) => {
     setSelectedIncident(incident);
     setNotes(incident.psych_notes || "");
@@ -95,8 +100,13 @@ export default function PsychologyPage() {
 
   const handleMarkAsAttended = async () => {
     if (!selectedIncident) return;
-    
-    if (!confirm("¿Confirmas que este caso ha sido atendido y finalizado? Desaparecerá de tu bandeja de pendientes.")) return;
+
+    if (
+      !confirm(
+        "¿Confirmas que este caso ha sido atendido y finalizado? Desaparecerá de tu bandeja de pendientes.",
+      )
+    )
+      return;
 
     setIsSaving(true);
     try {
@@ -106,14 +116,14 @@ export default function PsychologyPage() {
         .update({ status: "ATENDIDA", psych_notes: notes })
         .eq("id", selectedIncident.id);
       if (error) throw error;
-      
+
       toast.success("Caso marcado como ATENDIDO");
       setSelectedIncident(null);
       fetchData();
     } catch (error: any) {
       toast.error("Error actualizando estado: " + error.message);
     } finally {
-        setIsSaving(false);
+      setIsSaving(false);
     }
   };
 
@@ -146,7 +156,9 @@ export default function PsychologyPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 relative">
         {/* List Column - Show/Hide on mobile based on selection */}
-        <div className={`lg:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col absolute inset-0 lg:relative z-10 lg:z-auto transition-transform duration-300 ${selectedIncident ? '-translate-x-full lg:translate-x-0 hidden lg:flex' : 'translate-x-0 flex'}`}>
+        <div
+          className={`lg:col-span-1 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col absolute inset-0 lg:relative z-10 lg:z-auto transition-transform duration-300 ${selectedIncident ? "-translate-x-full lg:translate-x-0 hidden lg:flex" : "translate-x-0 flex"}`}
+        >
           <div className="p-4 border-b border-slate-100">
             <div className="relative">
               <Search className="absolute top-2.5 left-3 w-4 h-4 text-slate-400" />
@@ -199,11 +211,13 @@ export default function PsychologyPage() {
         </div>
 
         {/* Detail Column - Show/Hide on mobile based on selection */}
-        <div className={`lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col absolute inset-0 lg:relative z-20 lg:z-auto transition-transform duration-300 ${selectedIncident ? 'translate-x-0 flex' : 'translate-x-full lg:translate-x-0 hidden lg:flex'}`}>
+        <div
+          className={`lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col absolute inset-0 lg:relative z-20 lg:z-auto transition-transform duration-300 ${selectedIncident ? "translate-x-0 flex" : "translate-x-full lg:translate-x-0 hidden lg:flex"}`}
+        >
           {selectedIncident ? (
             <>
               <div className="p-4 md:p-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50/50 sticky top-0 z-10 backdrop-blur-md">
-                <button 
+                <button
                   onClick={() => setSelectedIncident(null)}
                   className="lg:hidden p-2 -ml-2 rounded-full hover:bg-slate-200 text-slate-600"
                 >
@@ -218,19 +232,21 @@ export default function PsychologyPage() {
                     {selectedIncident.students?.grade}°{" "}
                     {selectedIncident.students?.section}
                     <span className="hidden md:inline">•</span>
-                    <span className="hidden md:inline text-slate-400 text-xs">ID: {selectedIncident.id.substring(0,8)}</span>
+                    <span className="hidden md:inline text-slate-400 text-xs">
+                      ID: {selectedIncident.id.substring(0, 8)}
+                    </span>
                   </p>
                 </div>
                 <div className="hidden md:block">
-                    {isSaving ? (
-                        <span className="text-xs text-slate-400 flex items-center gap-2 animate-pulse">
-                            <Loader2 className="w-3 h-3 animate-spin"/> Guardando...
-                        </span>
-                    ) : lastSaved ? (
-                         <span className="text-xs text-emerald-600 flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3"/> Guardado
-                        </span>
-                    ) : null}
+                  {isSaving ? (
+                    <span className="text-xs text-slate-400 flex items-center gap-2 animate-pulse">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Guardando...
+                    </span>
+                  ) : lastSaved ? (
+                    <span className="text-xs text-emerald-600 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Guardado
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
@@ -252,22 +268,22 @@ export default function PsychologyPage() {
                 <div className="space-y-3 h-full pb-20">
                   <div className="flex items-center justify-between">
                     <h3 className="font-semibold text-slate-800 flex items-center gap-2 text-sm">
-                        <FileText className="w-4 h-4 text-rose-500" />
-                        Notas de Sesión / Intervención
+                      <FileText className="w-4 h-4 text-rose-500" />
+                      Notas de Sesión / Intervención
                     </h3>
                     <div className="md:hidden">
-                        {isSaving ? (
-                            <span className="text-[10px] text-slate-400 flex items-center gap-1 animate-pulse">
-                                <Loader2 className="w-3 h-3 animate-spin"/> Guardando
-                            </span>
-                        ) : lastSaved ? (
-                            <span className="text-[10px] text-emerald-600 flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3"/> Guardado
-                            </span>
-                        ) : null}
+                      {isSaving ? (
+                        <span className="text-[10px] text-slate-400 flex items-center gap-1 animate-pulse">
+                          <Loader2 className="w-3 h-3 animate-spin" /> Guardando
+                        </span>
+                      ) : lastSaved ? (
+                        <span className="text-[10px] text-emerald-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Guardado
+                        </span>
+                      ) : null}
                     </div>
                   </div>
-                  
+
                   <textarea
                     className="w-full h-[calc(100%-40px)] min-h-75 p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-100 focus:border-rose-400 outline-none resize-none text-sm leading-relaxed shadow-sm transition-all"
                     placeholder="Escriba aquí los detalles de la intervención, acuerdos o observaciones confidenciales. Se guardará automáticamente..."
@@ -285,39 +301,51 @@ export default function PsychologyPage() {
                     className="w-full md:w-auto bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200 shadow-lg"
                     disabled={isSaving}
                   >
-                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2"/> : <CheckCircle2 className="w-4 h-4 mr-2"/>}
+                    {isSaving ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                    )}
                     Finalizar y Marcar Atendido
                   </Button>
                 )}
-                 {/* Explicit save button for reassurance, though auto-save works */}
-                 <Button 
-                    variant="ghost" 
-                    onClick={() => {
-                        // Force save immediately
-                        const saveNow = async () => {
-                             setIsSaving(true);
-                             await supabase.from("incidents").update({ psych_notes: notes }).eq("id", selectedIncident.id);
-                             setLastSaved(new Date());
-                             setIsSaving(false);
-                             toast.success("Guardado manualexitoso");
-                        };
-                        saveNow();
-                    }}
-                    disabled={isSaving}
-                    className="w-full md:w-auto text-slate-400 hover:text-slate-600"
+                {/* Explicit save button for reassurance, though auto-save works */}
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    // Force save immediately
+                    const saveNow = async () => {
+                      setIsSaving(true);
+                      await supabase
+                        .from("incidents")
+                        .update({ psych_notes: notes })
+                        .eq("id", selectedIncident.id);
+                      setLastSaved(new Date());
+                      setIsSaving(false);
+                      toast.success("Guardado manualexitoso");
+                    };
+                    saveNow();
+                  }}
+                  disabled={isSaving}
+                  className="w-full md:w-auto text-slate-400 hover:text-slate-600"
                 >
-                    <Save className="w-4 h-4 mr-2"/>
-                    Guardar
+                  <Save className="w-4 h-4 mr-2" />
+                  Guardar
                 </Button>
               </div>
             </>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-300 p-8 text-center">
               <div className="bg-slate-50 p-6 rounded-full mb-4">
-                 <User className="w-12 h-12 text-slate-300" />
+                <User className="w-12 h-12 text-slate-300" />
               </div>
-              <h3 className="text-lg font-medium text-slate-700 mb-1">Ningún caso seleccionado</h3>
-              <p className="max-w-xs mx-auto">Seleccione un estudiante de la lista para ver los detalles y redactar notas.</p>
+              <h3 className="text-lg font-medium text-slate-700 mb-1">
+                Ningún caso seleccionado
+              </h3>
+              <p className="max-w-xs mx-auto">
+                Seleccione un estudiante de la lista para ver los detalles y
+                redactar notas.
+              </p>
             </div>
           )}
         </div>
