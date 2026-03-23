@@ -33,91 +33,106 @@ export function Sidebar() {
 
   const role = user.role;
 
-  const menuItems = [
+  const menuGroups = [
     {
-      title: "Inicio",
-      href: "/dashboard",
-      icon: Home,
-      roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE", "PSYCHOLOGIST"],
-    },
-    {
-      title: "Asistencia Scann",
-      href: "/dashboard/attendance",
-      icon: UserCheck2,
-      roles: [
-        "BRIGADIER_GENERAL_ALTERNO",
-        "BRIGADIER_GENERAL_PRINCIPAL",
-        "DOCENTE",
+      label: "General",
+      items: [
+        {
+          title: "Inicio",
+          href: "/dashboard",
+          icon: Home,
+          roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE", "PSYCHOLOGIST"],
+        },
       ],
     },
     {
-      title: "Incidencias",
-      href: "/dashboard/incidents",
-      icon: ClipboardList,
-      roles: [
-        "BRIGADIER_AULA",
-        "BRIGADIER_PATRULLA",
-        "BRIGADIER_GENERAL_ALTERNO",
-        "BRIGADIER_GENERAL_PRINCIPAL",
-        "DOCENTE",
+      label: "Operaciones",
+      items: [
+        {
+          title: "Asistencia Scann",
+          href: "/dashboard/attendance",
+          icon: UserCheck2,
+          roles: [
+            "BRIGADIER_GENERAL_ALTERNO",
+            "BRIGADIER_GENERAL_PRINCIPAL",
+            "DOCENTE",
+          ],
+        },
+        {
+          title: "Incidencias",
+          href: "/dashboard/incidents",
+          icon: ClipboardList,
+          roles: [
+            "BRIGADIER_AULA",
+            "BRIGADIER_PATRULLA",
+            "BRIGADIER_GENERAL_ALTERNO",
+            "BRIGADIER_GENERAL_PRINCIPAL",
+            "DOCENTE",
+          ],
+        },
+        {
+          title: "Elevaciones",
+          href: "/dashboard/elevated",
+          icon: ShieldCheck,
+          roles: [
+            "BRIGADIER_GENERAL_PRINCIPAL",
+            "BRIGADIER_GENERAL_ALTERNO",
+            "DOCENTE",
+          ],
+        },
+        {
+          title: "Psicología",
+          href: "/dashboard/psychology",
+          icon: BrainCircuit,
+          roles: ["PSYCHOLOGIST"],
+        },
       ],
     },
-
     {
-      title: "Elevaciones",
-      href: "/dashboard/elevated",
-      icon: ShieldCheck,
-      roles: [
-        "BRIGADIER_GENERAL_PRINCIPAL",
-        "BRIGADIER_GENERAL_ALTERNO",
-        "DOCENTE",
+      label: "Gestión",
+      items: [
+        {
+          title: "Estudiantes DB",
+          href: "/dashboard/students",
+          icon: GraduationCap,
+          roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"],
+        },
+        {
+          title: "Reporte Asistencias",
+          href: "/dashboard/attendance-report",
+          icon: CalendarDays,
+          roles: [
+            "BRIGADIER_GENERAL_ALTERNO",
+            "BRIGADIER_GENERAL_PRINCIPAL",
+            "DOCENTE",
+          ],
+        },
+        {
+          title: "Reportes Visulaes",
+          href: "/dashboard/reports",
+          icon: PieChart,
+          roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"],
+        },
       ],
     },
     {
-      title: "Psicología",
-      href: "/dashboard/psychology",
-      icon: BrainCircuit,
-      roles: ["PSYCHOLOGIST"],
-    },
-    {
-      title: "Estudiantes DB",
-      href: "/dashboard/students",
-      icon: GraduationCap,
-      roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"],
-    },
-    {
-      title: "Reporte Asistencias",
-      href: "/dashboard/attendance-report",
-      icon: CalendarDays,
-      roles: [
-        "BRIGADIER_GENERAL_ALTERNO",
-        "BRIGADIER_GENERAL_PRINCIPAL",
-        "DOCENTE",
+      label: "Configuración",
+      items: [
+        {
+          title: "Grados y Secciones",
+          href: "/dashboard/sections",
+          icon: ListTree,
+          roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"],
+        },
+        {
+          title: "Admin Usuarios",
+          href: "/dashboard/admin",
+          icon: Users,
+          roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"],
+        },
       ],
-    },
-    {
-      title: "Grados y Secciones",
-      href: "/dashboard/sections",
-      icon: ListTree,
-      roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"],
-    },
-    {
-      title: "Admin Usuarios",
-      href: "/dashboard/admin",
-      icon: Users,
-      roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"],
-    },
-    {
-      title: "Reportes",
-      href: "/dashboard/reports",
-      icon: PieChart,
-      roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"],
     },
   ];
-
-  const filteredItems = menuItems.filter(
-    (item) => item.roles.includes(role) || role === "DEVELOPER",
-  );
 
   return (
     <>
@@ -187,34 +202,51 @@ export function Sidebar() {
             </p>
           </div>
 
-          <nav className="space-y-1.5">
-            {filteredItems.map((item) => {
-              const isActive = pathname === item.href;
+          <nav className="space-y-6">
+            {menuGroups.map((group, groupIdx) => {
+              const groupItems = group.items.filter(
+                (item) => item.roles.includes(role) || role === "DEVELOPER"
+              );
+
+              if (groupItems.length === 0) return null;
+
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 group",
-                    isActive
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40 translate-x-1"
-                      : "hover:bg-slate-800 hover:text-white",
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      "w-5 h-5 transition-colors",
-                      isActive
-                        ? "text-indigo-200"
-                        : "text-slate-500 group-hover:text-slate-300",
-                    )}
-                  />
-                  <span className="truncate">{item.title}</span>
-                  {isActive && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                  )}
-                </Link>
+                <div key={groupIdx} className="space-y-2">
+                  <h3 className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    {group.label}
+                  </h3>
+                  <div className="space-y-1">
+                    {groupItems.map((item) => {
+                      const isActive = pathname === item.href;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setIsOpen(false)}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
+                            isActive
+                              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40 translate-x-1"
+                              : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                          )}
+                        >
+                          <item.icon
+                            className={cn(
+                              "w-5 h-5 transition-colors",
+                              isActive
+                                ? "text-indigo-200"
+                                : "text-slate-500 group-hover:text-slate-300"
+                            )}
+                          />
+                          <span className="truncate">{item.title}</span>
+                          {isActive && (
+                            <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </nav>
