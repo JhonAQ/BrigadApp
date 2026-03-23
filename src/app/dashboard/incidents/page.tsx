@@ -100,7 +100,9 @@ export default function IncidentsPage() {
     .filter((inc) => {
       const studentName =
         `${inc.students?.first_name} ${inc.students?.last_name}`.toLowerCase();
-      const matchesSearch = studentName.includes(historySearchTerm.toLowerCase());
+      const matchesSearch = studentName.includes(
+        historySearchTerm.toLowerCase(),
+      );
       const matchesDate = historyDate ? inc.date === historyDate : true;
       const matchesStatus =
         historyStatus === "ALL" ? true : inc.status === historyStatus;
