@@ -205,7 +205,7 @@ export function Sidebar() {
           <nav className="space-y-6">
             {menuGroups.map((group, groupIdx) => {
               const groupItems = group.items.filter(
-                (item) => item.roles.includes(role) || role === "DEVELOPER"
+                (item) => item.roles.includes(role) || role === "DEVELOPER",
               );
 
               if (groupItems.length === 0) return null;
@@ -227,7 +227,7 @@ export function Sidebar() {
                             "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
                             isActive
                               ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40 translate-x-1"
-                              : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                              : "text-slate-400 hover:bg-slate-800 hover:text-white",
                           )}
                         >
                           <item.icon
@@ -235,7 +235,7 @@ export function Sidebar() {
                               "w-5 h-5 transition-colors",
                               isActive
                                 ? "text-indigo-200"
-                                : "text-slate-500 group-hover:text-slate-300"
+                                : "text-slate-500 group-hover:text-slate-300",
                             )}
                           />
                           <span className="truncate">{item.title}</span>
