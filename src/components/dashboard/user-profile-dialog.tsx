@@ -5,12 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  X,
-  Lock,
-  LogOut,
-  ArrowRight,
-} from "lucide-react";
+import { X, Lock, LogOut, ArrowRight } from "lucide-react";
 
 interface UserProfileDialogProps {
   isOpen: boolean;

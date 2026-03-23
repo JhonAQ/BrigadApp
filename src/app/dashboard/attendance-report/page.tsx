@@ -53,25 +53,25 @@ export default function AttendanceReportPage() {
     if (usersData) setUsers(usersData);
 
     const range = (() => {
+      const monthStart = startOfMonth(currentDate).toISOString().slice(0, 10);
+      const monthEnd = endOfMonth(currentDate).toISOString().slice(0, 10);
+      
+      let viewStart, viewEnd;
+
       if (viewMode === "day") {
-        return {
-          start: startOfDay(currentDate).toISOString().slice(0, 10),
-          end: endOfDay(currentDate).toISOString().slice(0, 10),
-        };
+        viewStart = startOfDay(currentDate).toISOString().slice(0, 10);
+        viewEnd = endOfDay(currentDate).toISOString().slice(0, 10);
+      } else if (viewMode === "week") {
+        viewStart = startOfWeek(currentDate, { weekStartsOn: 1 }).toISOString().slice(0, 10);
+        viewEnd = endOfWeek(currentDate, { weekStartsOn: 1 }).toISOString().slice(0, 10);
+      } else {
+        viewStart = monthStart;
+        viewEnd = monthEnd;
       }
-      if (viewMode === "week") {
-        return {
-          start: startOfWeek(currentDate, { weekStartsOn: 1 })
-            .toISOString()
-            .slice(0, 10),
-          end: endOfWeek(currentDate, { weekStartsOn: 1 })
-            .toISOString()
-            .slice(0, 10),
-        };
-      }
+
       return {
-        start: startOfMonth(currentDate).toISOString().slice(0, 10),
-        end: endOfMonth(currentDate).toISOString().slice(0, 10),
+        start: viewStart < monthStart ? viewStart : monthStart,
+        end: viewEnd > monthEnd ? viewEnd : monthEnd
       };
     })();
 
@@ -154,6 +154,23 @@ export default function AttendanceReportPage() {
     return { total, punctual, late, uniformOk };
   }, [attendances]);
 
+  const calculateMonthlyStats = (userId: string) => {
+    const monthStart = startOfMonth(currentDate);
+    const monthEnd = endOfMonth(currentDate);
+    
+    const userMonthAtt = attendances.filter(a => {
+      const dateStr = a.date || a.scanned_at || a.created_at;
+      if (!dateStr) return false;
+      const parsed = parseISO(typeof dateStr === "string" ? dateStr : new Date(dateStr).toISOString());
+      return a.user_id === userId && parsed >= monthStart && parsed <= monthEnd;
+    });
+
+    return {
+      tardies: userMonthAtt.filter(a => !a.on_time).length,
+      incompleteUniform: userMonthAtt.filter(a => !a.uniform_complete).length
+    };
+  };
+
   const exportExcel = () => {
     const dayHeaders = daysInRange.map((day) => format(day, "dd/MM"));
     const summaryHeaders = [
@@ -163,13 +180,27 @@ export default function AttendanceReportPage() {
       "Uniforme C",
       "Uniforme I",
     ];
+    // Add monthly stats columns after role
+    // New Structure: Brigadier | DNI | Rol | Tardanzas (Mes) | Faltas Indum (Mes) | ...Days... | ...Summary...
+    
+    // We update userMap to only be used for the final summary columns if needed, OR we can recalculate everything per row
+    // Actually the summary columns at the end are for the VIEW range usually? Or are they total?
+    // Let's assume the Summary columns at the end are for the VIEWED range as before.
+    
     const userMap = users.reduce(
       (acc, u) => {
-        const userAtt = attendances.filter((a) => a.user_id === u.id);
+        // Filter attendances for the days being shown (daysInRange)
+        const relevantAtt = attendances.filter(a => {
+           const dateStr = a.date || a.scanned_at || a.created_at;
+           if (!dateStr) return false;
+           const parsed = parseISO(typeof dateStr === "string" ? dateStr : new Date(dateStr).toISOString());
+           return a.user_id === u.id && daysInRange.some(d => isSameDay(d, parsed));
+        });
+
         acc[u.id] = {
-          total: userAtt.length,
-          punctual: userAtt.filter((a) => a.on_time).length,
-          uniformComplete: userAtt.filter((a) => a.uniform_complete).length,
+          total: relevantAtt.length,
+          punctual: relevantAtt.filter((a) => a.on_time).length,
+          uniformComplete: relevantAtt.filter((a) => a.uniform_complete).length,
         };
         return acc;
       },
@@ -184,6 +215,8 @@ export default function AttendanceReportPage() {
       "Brigadier",
       "DNI",
       "Rol",
+      "Tardanzas (Mes)",
+      "Faltas Indum. (Mes)",
       ...dayHeaders,
       ...summaryHeaders,
     ];
@@ -198,15 +231,23 @@ export default function AttendanceReportPage() {
     aoa.push(headerRowValues);
 
     users.forEach((user) => {
-      const metrics = userMap[user.id] || {
+      const viewMetrics = userMap[user.id] || {
         total: 0,
         punctual: 0,
         uniformComplete: 0,
       };
-      const tardy = metrics.total - metrics.punctual;
-      const uniformIncomplete = metrics.total - metrics.uniformComplete;
+      const viewTardy = viewMetrics.total - viewMetrics.punctual;
+      const viewUniformIncomplete = viewMetrics.total - viewMetrics.uniformComplete;
 
-      const row = [user.name, user.dni || "", user.role];
+      const monthlyStats = calculateMonthlyStats(user.id);
+
+      const row = [
+        user.name, 
+        user.dni || "", 
+        user.role, 
+        monthlyStats.tardies, 
+        monthlyStats.incompleteUniform
+      ];
 
       daysInRange.forEach((day) => {
         const att = getAttendanceForUserAndDay(user.id, day);
@@ -214,16 +255,16 @@ export default function AttendanceReportPage() {
           row.push("-");
           return;
         }
-        const status = att.on_time ? "A" : "T";
+        const status = att.on_time ? "P" : "T";
         const uniform = att.uniform_complete ? "C" : "I";
         row.push(`${status} / ${uniform}`);
       });
 
-      row.push(metrics.total);
-      row.push(metrics.punctual);
-      row.push(tardy);
-      row.push(metrics.uniformComplete);
-      row.push(uniformIncomplete);
+      row.push(viewMetrics.total);
+      row.push(viewMetrics.punctual);
+      row.push(viewTardy);
+      row.push(viewMetrics.uniformComplete);
+      row.push(viewUniformIncomplete);
 
       aoa.push(row);
     });
@@ -232,6 +273,7 @@ export default function AttendanceReportPage() {
 
     const headerFill = { patternType: "solid", fgColor: { rgb: "EEF2FF" } }; // Indigo-50
     const summaryFill = { patternType: "solid", fgColor: { rgb: "ECFEFF" } }; // Cyan-50
+    const monthlyStatsFill = { patternType: "solid", fgColor: { rgb: "FEF3C7" } }; // Amber-50
     const borderThin = {
       top: { style: "thin", color: { rgb: "CBD5E1" } },
       bottom: { style: "thin", color: { rgb: "CBD5E1" } },
@@ -253,7 +295,9 @@ export default function AttendanceReportPage() {
       { wch: 28 }, // Brigadier
       { wch: 14 }, // DNI
       { wch: 18 }, // Rol
-      ...dayHeaders.map(() => ({ wch: 8 })), // días más angostos
+      { wch: 15 }, // Tardanzas Mes
+      { wch: 18 }, // Faltas Indum Mes
+      ...dayHeaders.map(() => ({ wch: 8 })), 
       { wch: 10 }, // Total
       { wch: 10 }, // Puntuales
       { wch: 10 }, // Tardanzas
@@ -293,28 +337,44 @@ export default function AttendanceReportPage() {
     const letters = colLetters(titleCols + 1);
     for (let c = 0; c <= titleCols; c++) {
       const ref = `${letters[c]}${headerRow}`;
+      
+      let fill = headerFill;
+      // Monthly stats headers are at index 3 and 4
+      if (c === 3 || c === 4) fill = monthlyStatsFill;
+      
       applyStyle(ref, {
         font: { bold: true, color: { rgb: "1F2937" } },
         alignment: { horizontal: "center", vertical: "center", wrapText: true },
-        fill: headerFill,
+        fill: fill,
         border: borderThin,
       });
     }
 
     // Data rows styles
     const startDataRow = headerRow + 1;
+    const monthlyStatsStartIndex = 3;
+    const daysStartIndex = 5;
+    const summaryStartIndex = daysStartIndex + dayHeaders.length;
+
     for (let r = startDataRow; r < aoa.length + 1; r++) {
       for (let c = 0; c <= titleCols; c++) {
         const ref = `${letters[c]}${r}`;
         if (!ws[ref]) continue;
-        const isSummaryCol = c >= 3 + dayHeaders.length;
+        
+        const isMonthlyStat = c === 3 || c === 4;
+        const isSummaryCol = c >= summaryStartIndex;
+        
+        let fill = undefined;
+        if (isMonthlyStat) fill = monthlyStatsFill;
+        if (isSummaryCol) fill = summaryFill;
+
         applyStyle(ref, {
           alignment: {
             horizontal: c < 3 ? "left" : "center",
             vertical: "center",
           },
           border: borderThin,
-          fill: isSummaryCol ? summaryFill : undefined,
+          fill: fill,
           font: { color: { rgb: "0F172A" } },
         });
       }
@@ -432,6 +492,16 @@ export default function AttendanceReportPage() {
                   <th className="font-semibold p-3 text-sm text-slate-700 sticky left-0 bg-slate-50 z-10 border-r border-slate-200">
                     Brigadier
                   </th>
+                  <th className="font-semibold p-2 text-xs text-slate-700 text-center border-r border-slate-200 bg-amber-50">
+                    Tardanzas
+                    <br />
+                    (Mes)
+                  </th>
+                  <th className="font-semibold p-2 text-xs text-slate-700 text-center border-r border-slate-200 bg-amber-50">
+                    Faltas U.
+                    <br />
+                    (Mes)
+                  </th>
                   {daysInRange.map((day, i) => (
                     <th
                       key={i}
@@ -470,6 +540,12 @@ export default function AttendanceReportPage() {
                           {user.role}
                         </div>
                       </td>
+                      <td className="p-2 text-center text-sm font-bold text-red-600 bg-amber-50/50 border-r border-slate-200">
+                        {calculateMonthlyStats(user.id).tardies}
+                      </td>
+                      <td className="p-2 text-center text-sm font-bold text-slate-700 bg-amber-50/50 border-r border-slate-200">
+                        {calculateMonthlyStats(user.id).incompleteUniform}
+                      </td>
                       {daysInRange.map((day, i) => {
                         const att = getAttendanceForUserAndDay(user.id, day);
                         const isWeekend =
@@ -490,7 +566,7 @@ export default function AttendanceReportPage() {
                                   }`}
                                   title={`${format(day, "dd/MM")} - ${att.on_time ? "Puntual" : "Tardanza"}`}
                                 >
-                                  {att.on_time ? "A" : "T"}
+                                  {att.on_time ? "P" : "T"}
                                 </div>
                                 <div
                                   className={`w-7 h-5 rounded flex items-center justify-center text-[10px] font-semibold ${
@@ -522,10 +598,10 @@ export default function AttendanceReportPage() {
         )}
       </div>
 
-      <div className="mt-4 flex gap-4 text-xs text-slate-500 justify-end">
+      <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500 justify-end">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 bg-emerald-100 border border-emerald-200 rounded-sm"></div>{" "}
-          (A) Puntual
+          (P) Puntual
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 bg-amber-100 border border-amber-200 rounded-sm"></div>{" "}

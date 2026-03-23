@@ -236,9 +236,9 @@ export function Sidebar() {
           </div>
         </div>
       </aside>
-      <UserProfileDialog 
-        isOpen={isProfileOpen} 
-        onClose={() => setIsProfileOpen(false)} 
+      <UserProfileDialog
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
       />
     </>
   );

@@ -22,7 +22,11 @@ export default function AttendancePage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"scanner" | "config">("scanner");
 
-  const canConfigure = user && ["DEVELOPER", "BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"].includes(user.role);
+  const canConfigure =
+    user &&
+    ["DEVELOPER", "BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE", "COORDINADOR"].includes(
+      user.role
+    );
 
   // Scanner State
   const webcamRef = useRef<Webcam>(null);
@@ -223,12 +227,15 @@ export default function AttendancePage() {
           >
             <Camera className="w-4 h-4" /> Escáner
           </button>
-          <button
-            onClick={() => setActiveTab("config")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "config" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"}`}
-          >
-            <Settings className="w-4 h-4" /> Configuración
-          </button>
+          
+          {canConfigure && (
+            <button
+              onClick={() => setActiveTab("config")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${activeTab === "config" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              <Settings className="w-4 h-4" /> Configuración
+            </button>
+          )}
         </div>
       </div>
 
@@ -415,7 +422,7 @@ export default function AttendancePage() {
         )}
 
         {/* TAB: CONFIGURACION */}
-        {activeTab === "config" && (
+        {activeTab === "config" && canConfigure && (
           <div className="p-8 max-w-2xl mx-auto w-full">
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-slate-800">

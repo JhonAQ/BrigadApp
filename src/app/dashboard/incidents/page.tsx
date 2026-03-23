@@ -222,9 +222,8 @@ export default function IncidentsPage() {
     if (!selectedStudent || !severity || !description) return;
 
     const isAuthorized = [
-      "DOCENTE",
+      "COORDINADOR",
       "BRIGADIER_GENERAL_PRINCIPAL",
-      "BRIGADIER_GENERAL_ALTERNO",
       "DEVELOPER",
       "PSYCHOLOGIST",
     ].includes(user?.role || "");
@@ -277,7 +276,11 @@ export default function IncidentsPage() {
     setSearchTerm("");
     setSelectedGrade("");
     setSelectedSection("");
-    setActiveTab("HISTORY");
+    if (canViewHistory) {
+      setActiveTab("HISTORY");
+    } else {
+      setActiveTab("NEW");
+    }
   };
 
   return (

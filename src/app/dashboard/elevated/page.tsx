@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/button";
 
 export default function ElevatedIncidentsPage() {
   const { user } = useAuth();
@@ -19,10 +21,15 @@ export default function ElevatedIncidentsPage() {
   const [elevatedIncidents, setElevatedIncidents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"APPROVE" | "REJECT" | null>(null);
+  const [selectedIncident, setSelectedIncident] = useState<any>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   const authorizedRoles = [
-    "DOCENTE",
+    "COORDINADOR",
     "BRIGADIER_GENERAL_PRINCIPAL",
-    "BRIGADIER_GENERAL_ALTERNO",
     "DEVELOPER",
     "PSYCHOLOGIST",
   ];
@@ -52,54 +59,57 @@ export default function ElevatedIncidentsPage() {
     setIsLoading(false);
   };
 
-  const handleApprove = async (incident: any) => {
-    if (
-      !confirm(
-        "¿Confirmas el envío de este caso a Psicología? El psicólogo será notificado.",
-      )
-    )
-      return;
-
-    const { error } = await supabase
-      .from("incidents")
-      .update({
-        status: "PENDIENTE", // Reset status so it's not ESCALADA anymore
-        needs_psychology: true, // This puts it in the Psychology inbox
-      })
-      .eq("id", incident.id);
-
-    if (error) {
-      toast.error("Error: " + error.message);
-    } else {
-      toast.success("Incidencia derivada a Psicología correctamente.");
-      fetchElevatedIncidents();
-    }
+  const openApproveModal = (incident: any) => {
+    setSelectedIncident(incident);
+    setModalType("APPROVE");
+    setModalOpen(true);
   };
 
-  const handleReject = async (incident: any) => {
-    const reason = prompt(
-      "Ingrese el motivo del rechazo (opcional):",
-      "No amerita intervención psicológica inmediata.",
-    );
-    if (reason === null) return; // Cancelled
+  const openRejectModal = (incident: any) => {
+    setSelectedIncident(incident);
+    setModalType("REJECT");
+    setRejectReason("No amerita intervención psicológica inmediata.");
+    setModalOpen(true);
+  };
 
-    const { error } = await supabase
-      .from("incidents")
-      .update({
-        status: "PENDIENTE", // Reset status to normal incident
-        needs_psychology: false, // Ensure it stays out of Psychology inbox
-        psych_notes: `[Rechazado Elevación]: ${reason}`, // Append note
-      })
-      .eq("id", incident.id);
+  const confirmAction = async () => {
+    if (!selectedIncident) return;
 
-    if (error) {
-      toast.error("Error: " + error.message);
-    } else {
-      toast.info(
-        "Elevación rechazada. El caso permanece como incidencia común.",
-      );
-      fetchElevatedIncidents();
+    if (modalType === "APPROVE") {
+      const { error } = await supabase
+        .from("incidents")
+        .update({
+          status: "PENDIENTE",
+          needs_psychology: true,
+        })
+        .eq("id", selectedIncident.id);
+
+      if (error) {
+        toast.error("Error: " + error.message);
+      } else {
+        toast.success("Incidencia derivada a Psicología correctamente.");
+      }
+    } else if (modalType === "REJECT") {
+      const { error } = await supabase
+        .from("incidents")
+        .update({
+          status: "PENDIENTE",
+          needs_psychology: false,
+          psych_notes: `[Rechazado Elevación]: ${rejectReason}`,
+        })
+        .eq("id", selectedIncident.id);
+
+      if (error) {
+        toast.error("Error: " + error.message);
+      } else {
+        toast.info(
+          "Elevación rechazada. El caso permanece como incidencia común.",
+        );
+      }
     }
+
+    setModalOpen(false);
+    fetchElevatedIncidents();
   };
 
   if (!user || isLoading) {
@@ -186,14 +196,14 @@ export default function ElevatedIncidentsPage() {
 
                 <div className="flex items-center gap-3 mt-2 border-t border-slate-100 pt-4 justify-end">
                   <button
-                    onClick={() => handleReject(incident)}
+                    onClick={() => openRejectModal(incident)}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                   >
                     <XCircle className="w-4 h-4" />
                     Rechazar
                   </button>
                   <button
-                    onClick={() => handleApprove(incident)}
+                    onClick={() => openApproveModal(incident)}
                     className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm"
                   >
                     <CheckCircle2 className="w-4 h-4" />
@@ -205,6 +215,52 @@ export default function ElevatedIncidentsPage() {
           ))}
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={
+          modalType === "APPROVE" ? "Confirmar Elevación" : "Rechazar Elevación"
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-slate-600">
+            {modalType === "APPROVE"
+              ? "¿Estás seguro de que deseas enviar este caso al área de Psicología? Se notificará al psicólogo encargado."
+              : "Estás a punto de rechazar la elevación de este caso. Puedes indicar un motivo opcional:"}
+          </p>
+
+          {modalType === "REJECT" && (
+            <textarea
+              className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-100 outline-none text-sm"
+              rows={3}
+              placeholder="Motivo del rechazo..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+          )}
+
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              variant="ghost"
+              onClick={() => setModalOpen(false)}
+              className="text-slate-500"
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant={modalType === "APPROVE" ? "primary" : "danger"}
+              onClick={confirmAction}
+              className={
+                modalType === "APPROVE" ? "bg-indigo-600 hover:bg-indigo-700" : ""
+              }
+            >
+              {modalType === "APPROVE" ? "Confirmar Envío" : "Confirmar Rechazo"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
