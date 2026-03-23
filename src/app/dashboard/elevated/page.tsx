@@ -95,7 +95,9 @@ export default function ElevatedIncidentsPage() {
     if (error) {
       toast.error("Error: " + error.message);
     } else {
-      toast.info("Elevación rechazada. El caso permanece como incidencia común.");
+      toast.info(
+        "Elevación rechazada. El caso permanece como incidencia común.",
+      );
       fetchElevatedIncidents();
     }
   };
@@ -124,9 +126,7 @@ export default function ElevatedIncidentsPage() {
       {elevatedIncidents.length === 0 ? (
         <div className="bg-slate-50 rounded-xl p-12 text-center border border-dashed border-slate-300">
           <CheckCircle2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-medium text-slate-600">
-            Todo al día
-          </h3>
+          <h3 className="text-lg font-medium text-slate-600">Todo al día</h3>
           <p className="text-slate-500">
             No hay solicitudes de elevación pendientes de revisión.
           </p>
@@ -151,7 +151,8 @@ export default function ElevatedIncidentsPage() {
                         {incident.students?.last_name}
                       </h3>
                       <p className="text-sm text-slate-500 flex items-center gap-2">
-                        {incident.students?.grade} - {incident.students?.section}{" "}
+                        {incident.students?.grade} -{" "}
+                        {incident.students?.section}{" "}
                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
                         {incident.date} a las {incident.time}
                       </p>
