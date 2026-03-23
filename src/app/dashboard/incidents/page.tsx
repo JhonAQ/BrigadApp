@@ -54,7 +54,11 @@ export default function IncidentsPage() {
 
   // Manual entry state
   const [isManualEntry, setIsManualEntry] = useState(false);
-  const [manualData, setManualData] = useState({ firstName: "", lastName: "", dni: "" });
+  const [manualData, setManualData] = useState({
+    firstName: "",
+    lastName: "",
+    dni: "",
+  });
 
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [severity, setSeverity] = useState<Incident["type"] | null>(null);
@@ -89,7 +93,12 @@ export default function IncidentsPage() {
   const handleNext = () => setStep(step + 1);
 
   const handleManualSubmit = async () => {
-    if (!manualData.firstName || !manualData.lastName || !selectedGrade || !selectedSection) {
+    if (
+      !manualData.firstName ||
+      !manualData.lastName ||
+      !selectedGrade ||
+      !selectedSection
+    ) {
       toast.error("Por favor complete nombres, apellidos, grado y sección");
       return;
     }
@@ -101,7 +110,7 @@ export default function IncidentsPage() {
     const existing = dbStudents.find(
       (s) =>
         s.first_name?.toUpperCase() === fName &&
-        s.last_name?.toUpperCase() === lName
+        s.last_name?.toUpperCase() === lName,
     );
 
     if (existing) {
@@ -421,7 +430,10 @@ export default function IncidentsPage() {
                           className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
                           value={manualData.dni}
                           onChange={(e) =>
-                            setManualData({ ...manualData, dni: e.target.value })
+                            setManualData({
+                              ...manualData,
+                              dni: e.target.value,
+                            })
                           }
                           placeholder="Ej. 12345678"
                           maxLength={8}
