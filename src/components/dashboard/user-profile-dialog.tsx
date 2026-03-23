@@ -5,9 +5,12 @@ import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { X, Lock, User as UserIcon, LogOut, Check, ArrowRight } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"; // Assuming we might switch to shadcn later, but for now I'll use a custom Modal wrapper or just inline it if I can't reuse the Modal component effectively. actually I created Modal component.
-import { Modal } from "@/components/ui/modal";
+import {
+  X,
+  Lock,
+  LogOut,
+  ArrowRight,
+} from "lucide-react";
 
 interface UserProfileDialogProps {
   isOpen: boolean;
@@ -17,7 +20,7 @@ interface UserProfileDialogProps {
 export function UserProfileDialog({ isOpen, onClose }: UserProfileDialogProps) {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<"profile" | "security">("profile");
-  
+
   // Password state
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -28,7 +31,7 @@ export function UserProfileDialog({ isOpen, onClose }: UserProfileDialogProps) {
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (newPassword !== confirmPassword) {
       toast.error("Las contraseñas no coinciden");
       return;
@@ -93,43 +96,46 @@ export function UserProfileDialog({ isOpen, onClose }: UserProfileDialogProps) {
       }`}
       onClick={onClose}
     >
-      <div 
+      <div
         className={`w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden transform transition-all duration-300 ${
           isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-4"
         } m-4`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-white relative h-32">
-          <button 
+        <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-white relative h-24">
+          <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
           >
             <X className="w-5 h-5 text-white" />
           </button>
-          
-          <div className="absolute -bottom-10 left-6 flex items-end">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-1 shadow-lg">
-              <div className="w-full h-full rounded-xl bg-slate-900 flex items-center justify-center text-2xl font-bold text-white">
-                {user.name.charAt(0)}
-              </div>
+        </div>
+
+        {/* User Info Overlay */}
+        <div className="px-6 -mt-10 relative z-10 flex flex-col items-center">
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-1 shadow-lg shadow-indigo-500/20">
+            <div className="w-full h-full rounded-xl bg-slate-900 flex items-center justify-center text-3xl font-bold text-white">
+              {user.name.charAt(0)}
             </div>
-            <div className="mb-2 ml-3">
-              <h2 className="text-xl font-bold text-white">{user.name}</h2>
-              <p className="text-slate-300 text-sm">{user.role.replace(/_/g, " ")}</p>
-            </div>
+          </div>
+          <div className="mt-3 text-center">
+            <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>
+            <p className="text-slate-500 text-sm font-medium">
+              {user.role.replace(/_/g, " ")}
+            </p>
           </div>
         </div>
 
         {/* Content */}
-        <div className="pt-14 px-6 pb-6">
+        <div className="px-6 pb-6 mt-6">
           {/* Tabs */}
-          <div className="flex border-b border-slate-200 mb-6">
+          <div className="flex border-b border-slate-100 mb-6 justify-center">
             <button
               onClick={() => setActiveTab("profile")}
               className={`pb-2 px-4 text-sm font-medium transition-colors relative ${
-                activeTab === "profile" 
-                  ? "text-indigo-600" 
+                activeTab === "profile"
+                  ? "text-indigo-600"
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
@@ -141,8 +147,8 @@ export function UserProfileDialog({ isOpen, onClose }: UserProfileDialogProps) {
             <button
               onClick={() => setActiveTab("security")}
               className={`pb-2 px-4 text-sm font-medium transition-colors relative ${
-                activeTab === "security" 
-                  ? "text-indigo-600" 
+                activeTab === "security"
+                  ? "text-indigo-600"
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
@@ -157,23 +163,35 @@ export function UserProfileDialog({ isOpen, onClose }: UserProfileDialogProps) {
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <p className="text-xs text-slate-500 uppercase font-semibold">DNI</p>
+                  <p className="text-xs text-slate-500 uppercase font-semibold">
+                    DNI
+                  </p>
                   <p className="text-slate-900 font-medium mt-1">{user.dni}</p>
                 </div>
                 {user.grade && (
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-xs text-slate-500 uppercase font-semibold">Grado</p>
-                    <p className="text-slate-900 font-medium mt-1">{user.grade}</p>
+                    <p className="text-xs text-slate-500 uppercase font-semibold">
+                      Grado
+                    </p>
+                    <p className="text-slate-900 font-medium mt-1">
+                      {user.grade}
+                    </p>
                   </div>
                 )}
                 {user.section && (
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-xs text-slate-500 uppercase font-semibold">Sección</p>
-                    <p className="text-slate-900 font-medium mt-1">{user.section}</p>
+                    <p className="text-xs text-slate-500 uppercase font-semibold">
+                      Sección
+                    </p>
+                    <p className="text-slate-900 font-medium mt-1">
+                      {user.section}
+                    </p>
                   </div>
                 )}
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <p className="text-xs text-slate-500 uppercase font-semibold">Rol</p>
+                  <p className="text-xs text-slate-500 uppercase font-semibold">
+                    Rol
+                  </p>
                   <p className="text-slate-900 font-medium mt-1 text-xs truncate">
                     {user.role}
                   </p>
@@ -194,9 +212,14 @@ export function UserProfileDialog({ isOpen, onClose }: UserProfileDialogProps) {
               </div>
             </div>
           ) : (
-            <form onSubmit={handleUpdatePassword} className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <form
+              onSubmit={handleUpdatePassword}
+              className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300"
+            >
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Contraseña Actual</label>
+                <label className="text-sm font-medium text-slate-700">
+                  Contraseña Actual
+                </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
@@ -211,7 +234,9 @@ export function UserProfileDialog({ isOpen, onClose }: UserProfileDialogProps) {
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Nueva Contraseña</label>
+                <label className="text-sm font-medium text-slate-700">
+                  Nueva Contraseña
+                </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
@@ -226,7 +251,9 @@ export function UserProfileDialog({ isOpen, onClose }: UserProfileDialogProps) {
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-slate-700">Confirmar Contraseña</label>
+                <label className="text-sm font-medium text-slate-700">
+                  Confirmar Contraseña
+                </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input

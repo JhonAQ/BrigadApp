@@ -164,7 +164,10 @@ export function Sidebar() {
         </div>
 
         <div className="flex-1 overflow-y-auto py-6 px-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <div className="bg-slate-800/50 rounded-xl p-4 mb-8 border border-slate-700/50 ring-1 ring-inset ring-white/5">
+          <div
+            onClick={() => setIsProfileOpen(true)}
+            className="bg-slate-800/50 rounded-xl p-4 mb-8 border border-slate-700/50 ring-1 ring-inset ring-white/5 cursor-pointer hover:bg-slate-800 transition-colors"
+          >
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
                 {user.name.charAt(0)}
@@ -233,6 +236,10 @@ export function Sidebar() {
           </div>
         </div>
       </aside>
+      <UserProfileDialog 
+        isOpen={isProfileOpen} 
+        onClose={() => setIsProfileOpen(false)} 
+      />
     </>
   );
 }

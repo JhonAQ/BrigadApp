@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
 import jsQR from "jsqr";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import {
   Camera,
@@ -18,7 +19,10 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AttendancePage() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"scanner" | "config">("scanner");
+
+  const canConfigure = user && ["DEVELOPER", "BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"].includes(user.role);
 
   // Scanner State
   const webcamRef = useRef<Webcam>(null);

@@ -38,9 +38,13 @@ export default function IncidentsPage() {
 
   // History Filters
   const [historySearchTerm, setHistorySearchTerm] = useState("");
-  const [historyDate, setHistoryDate] = useState("");
+  const [historyTimeRange, setHistoryTimeRange] = useState<
+    "ALL" | "TODAY" | "WEEK" | "MONTH" | "CUSTOM"
+  >("ALL");
+  const [historyCustomDate, setHistoryCustomDate] = useState("");
   const [historyStatus, setHistoryStatus] = useState("ALL");
   const [historyType, setHistoryType] = useState("ALL");
+  const [historyGrade, setHistoryGrade] = useState("ALL");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   // Selection Filters
@@ -103,13 +107,41 @@ export default function IncidentsPage() {
       const matchesSearch = studentName.includes(
         historySearchTerm.toLowerCase(),
       );
-      const matchesDate = historyDate ? inc.date === historyDate : true;
+
+      // Date Filtering Logic
+      let matchesDate = true;
+      const incidentDate = new Date(`${inc.date}T12:00:00`); // Normalize time
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (historyTimeRange === "TODAY") {
+        matchesDate = inc.date === new Date().toISOString().split("T")[0];
+      } else if (historyTimeRange === "WEEK") {
+        const firstDayOfWeek = new Date(today);
+        firstDayOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+        matchesDate = incidentDate >= firstDayOfWeek;
+      } else if (historyTimeRange === "MONTH") {
+        matchesDate =
+          incidentDate.getMonth() === today.getMonth() &&
+          incidentDate.getFullYear() === today.getFullYear();
+      } else if (historyTimeRange === "CUSTOM" && historyCustomDate) {
+        matchesDate = inc.date === historyCustomDate;
+      }
+
       const matchesStatus =
         historyStatus === "ALL" ? true : inc.status === historyStatus;
       const matchesType =
         historyType === "ALL" ? true : inc.type === historyType;
+      const matchesGrade =
+        historyGrade === "ALL" ? true : inc.students?.grade === historyGrade;
 
-      return matchesSearch && matchesDate && matchesStatus && matchesType;
+      return (
+        matchesSearch &&
+        matchesDate &&
+        matchesStatus &&
+        matchesType &&
+        matchesGrade
+      );
     })
     .sort((a, b) => {
       const dateA = new Date(`${a.date}T${a.time}`);
@@ -276,53 +308,98 @@ export default function IncidentsPage() {
       {activeTab === "HISTORY" && canViewHistory && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in">
           <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-bold text-slate-700 mb-4">
-              Historial de Incidencias
+            <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
+              <History className="w-5 h-5 text-indigo-500" /> Historial de
+              Incidencias
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              <input
-                type="text"
-                placeholder="Buscar alumno..."
-                className="p-2 border border-slate-200 rounded-lg text-sm md:col-span-2"
-                value={historySearchTerm}
-                onChange={(e) => setHistorySearchTerm(e.target.value)}
-              />
-              <input
-                type="date"
-                className="p-2 border border-slate-200 rounded-lg text-sm"
-                value={historyDate}
-                onChange={(e) => setHistoryDate(e.target.value)}
-              />
-              <select
-                className="p-2 border border-slate-200 rounded-lg text-sm"
-                value={historyStatus}
-                onChange={(e) => setHistoryStatus(e.target.value)}
-              >
-                <option value="ALL">Todo Estado</option>
-                <option value="PENDIENTE">Pendiente</option>
-                <option value="ATENDIDA">Atendida</option>
-                <option value="ESCALADA">Escalada</option>
-              </select>
-              <select
-                className="p-2 border border-slate-200 rounded-lg text-sm"
-                value={historyType}
-                onChange={(e) => setHistoryType(e.target.value)}
-              >
-                <option value="ALL">Todo Tipo</option>
-                <option value="LEVE">Leve</option>
-                <option value="MODERADA">Moderada</option>
-                <option value="GRAVE">Grave</option>
-              </select>
+
+            {/* Main Filters Row */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3">
+              <div className="md:col-span-4">
+                <input
+                  type="text"
+                  placeholder="Buscar alumno..."
+                  className="w-full p-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-100 outline-none"
+                  value={historySearchTerm}
+                  onChange={(e) => setHistorySearchTerm(e.target.value)}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <select
+                  className="w-full p-2.5 border border-slate-200 rounded-lg text-sm bg-white outline-none"
+                  value={historyTimeRange}
+                  onChange={(e) => setHistoryTimeRange(e.target.value as any)}
+                >
+                  <option value="ALL">Toda fecha</option>
+                  <option value="TODAY">Hoy</option>
+                  <option value="WEEK">Esta Semana</option>
+                  <option value="MONTH">Este Mes</option>
+                  <option value="CUSTOM">Elegir fecha...</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <select
+                  className="w-full p-2.5 border border-slate-200 rounded-lg text-sm bg-white outline-none"
+                  value={historyGrade}
+                  onChange={(e) => setHistoryGrade(e.target.value)}
+                >
+                  <option value="ALL">Todo Grado</option>
+                  {availableGrades.map((g) => (
+                    <option key={g} value={g}>
+                      {g}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <select
+                  className="w-full p-2.5 border border-slate-200 rounded-lg text-sm bg-white outline-none"
+                  value={historyStatus}
+                  onChange={(e) => setHistoryStatus(e.target.value)}
+                >
+                  <option value="ALL">Todo Estado</option>
+                  <option value="PENDIENTE">Pendiente</option>
+                  <option value="ATENDIDA">Atendida</option>
+                  <option value="ESCALADA">Escalada</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <select
+                  className="w-full p-2.5 border border-slate-200 rounded-lg text-sm bg-white outline-none"
+                  value={historyType}
+                  onChange={(e) => setHistoryType(e.target.value)}
+                >
+                  <option value="ALL">Gravedad</option>
+                  <option value="LEVE">Leve</option>
+                  <option value="MODERADA">Moderada</option>
+                  <option value="GRAVE">Grave</option>
+                </select>
+              </div>
             </div>
-            <div className="flex justify-between items-center mt-3">
-              <span className="text-xs text-slate-500">
-                Mostrando {filteredHistory.length} registros
+
+            {/* Custom Date Picker (Only if CUSTOM selected) */}
+            {historyTimeRange === "CUSTOM" && (
+              <div className="mb-3 animate-in fade-in slide-in-from-top-1">
+                <input
+                  type="date"
+                  className="p-2 border border-slate-200 rounded-lg text-sm bg-white"
+                  value={historyCustomDate}
+                  onChange={(e) => setHistoryCustomDate(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200/50">
+              <span className="text-xs text-slate-500 font-medium">
+                Mostrando <b>{filteredHistory.length}</b> registros
               </span>
               <button
                 onClick={() =>
                   setSortOrder(sortOrder === "desc" ? "asc" : "desc")
                 }
-                className="text-xs font-semibold text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded"
+                className="text-xs font-semibold text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1"
               >
                 Orden: {sortOrder === "desc" ? "Más recientes" : "Más antiguos"}
               </button>

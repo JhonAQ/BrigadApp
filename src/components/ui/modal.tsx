@@ -14,7 +14,13 @@ interface ModalProps {
   className?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  className,
+}: ModalProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -51,7 +57,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
             <div
               className={cn(
                 "relative w-full overflow-hidden rounded-xl bg-white shadow-2xl ring-1 ring-slate-900/5",
-                className
+                className,
               )}
             >
               <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
@@ -65,14 +71,12 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="p-6 max-h-[80vh] overflow-y-auto">
-                {children}
-              </div>
+              <div className="p-6 max-h-[80vh] overflow-y-auto">{children}</div>
             </div>
           </motion.div>
         </>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }
