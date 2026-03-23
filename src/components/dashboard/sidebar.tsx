@@ -60,9 +60,9 @@ export function Sidebar() {
         "BRIGADIER_GENERAL_ALTERNO",
         "BRIGADIER_GENERAL_PRINCIPAL",
         "DOCENTE",
-        "PSYCHOLOGIST",
       ],
     },
+
     {
       title: "Elevaciones",
       href: "/dashboard/elevated",

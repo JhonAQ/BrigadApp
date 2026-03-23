@@ -26,8 +26,11 @@ body {
 }
 
 @layer base {
-  select, input, textarea, option {
-    color: #0f172a !important;
-    background-color: #ffffff !important;
+  select,
+  input,
+  textarea,
+  option {
+    color: #0f172a;
+    background-color: #ffffff;
   }
 }
