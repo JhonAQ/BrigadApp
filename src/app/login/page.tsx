@@ -7,7 +7,6 @@ import { ShieldCheck, User, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import Link from "next/link";
-import { BrandLogo } from "@/components/brand/logo";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -38,8 +37,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-slate-50">
-      {/* Visual Side */}
+    <div className="min-h-[100dvh] grid lg:grid-cols-2 bg-slate-50 relative overflow-hidden">
+      {/* Mobile Background Decorations */}
+      <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-br from-indigo-600 to-indigo-800 lg:hidden -z-0 rounded-b-[2.5rem]" />
+
+      {/* Visual Side (Desktop) */}
       <div className="relative hidden lg:flex flex-col items-center justify-center bg-slate-900 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/30 via-slate-900 to-slate-900 z-10" />
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1577896851231-70ef18881754?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-20" />
@@ -69,33 +71,35 @@ export default function LoginPage() {
       </div>
 
       {/* Form Side */}
-      <div className="flex flex-col items-center justify-center p-6 sm:p-12 lg:p-24 bg-white relative">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center lg:text-left">
-            <div className="lg:hidden flex justify-center mb-6">
-              <BrandLogo className="text-2xl" iconClassName="w-12 h-12" />
+      <div className="flex flex-col items-center justify-center p-4 sm:p-8 lg:p-24 bg-transparent lg:bg-white relative z-10 w-full">
+        <div className="w-full max-w-md space-y-8 bg-white/95 lg:bg-transparent backdrop-blur-sm lg:backdrop-blur-none p-8 lg:p-0 rounded-[2rem] shadow-2xl lg:shadow-none border border-white/20 lg:border-none mt-12 lg:mt-0 relative before:absolute before:inset-0 before:bg-white/40 before:rounded-[2rem] lg:before:hidden before:-z-10">
+          <div className="text-center lg:text-left pt-2 pb-2">
+            <div className="lg:hidden flex justify-center mb-8">
+              <div className="flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-xl shadow-indigo-500/10 border border-slate-100 ring-4 ring-white absolute -top-8">
+                <ShieldCheck className="w-8 h-8 text-indigo-600" />
+              </div>
             </div>
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
-              Bienvenido de nuevo
+            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+              Bienvenido
             </h2>
-            <p className="mt-2 text-slate-500">
-              Ingrese sus credenciales para acceder al panel de control.
+            <p className="mt-3 text-slate-500 text-sm font-medium">
+              Ingrese sus credenciales para continuar
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-700 ml-1">
+          <form onSubmit={handleLogin} className="space-y-7 mt-8">
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700 ml-1">
                   Usuario o DNI
                 </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                    <User className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300" />
                   </div>
                   <input
                     type="text"
-                    className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium sm:text-sm"
+                    className="block w-full pl-12 pr-4 py-3.5 bg-slate-50/50 hover:bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition-all duration-300 font-medium sm:text-sm shadow-sm"
                     placeholder="Ingrese su usuario"
                     value={dni}
                     onChange={(e) => setDni(e.target.value)}
@@ -104,19 +108,19 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-slate-700 ml-1">
+                  <label className="text-sm font-semibold text-slate-700 ml-1">
                     Contraseña
                   </label>
                 </div>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                    <Lock className="h-5 w-5 text-slate-400 group-focus-within:text-indigo-600 transition-colors duration-300" />
                   </div>
                   <input
                     type="password"
-                    className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium sm:text-sm"
+                    className="block w-full pl-12 pr-4 py-3.5 bg-slate-50/50 hover:bg-slate-50 border border-slate-200 rounded-2xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 focus:bg-white transition-all duration-300 font-medium sm:text-sm shadow-sm"
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -128,7 +132,7 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all duration-200 flex items-center justify-center gap-2 group"
+              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-[15px] font-semibold rounded-2xl shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all duration-300 flex items-center justify-center gap-2 group mt-2"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -145,20 +149,26 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center text-sm text-slate-500">
-            ¿Olvidó su contraseña?{" "}
+          <p className="text-center text-[13px] text-slate-500 font-medium">
+            ¿Problemas para acceder?{" "}
             <a
               href="#"
-              className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
+              className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors ml-1 hover:underline underline-offset-4"
+              onClick={(e) => {
+                e.preventDefault();
+                toast.info(
+                  "Por favor, contacte a su administrador o soporte para recuperar su acceso.",
+                );
+              }}
             >
-              Contacte al administrador
+              Contactar a soporte
             </a>
           </p>
         </div>
 
         {/* Footer */}
-        <div className="absolute bottom-6 left-0 right-0 text-center">
-          <p className="text-xs text-slate-400">
+        <div className="absolute bottom-6 left-0 right-0 text-center lg:bottom-12 z-0 hidden lg:block">
+          <p className="text-xs text-slate-400 font-medium">
             &copy; {new Date().getFullYear()} BrigadApp v1.0. Todos los derechos
             reservados.
           </p>
