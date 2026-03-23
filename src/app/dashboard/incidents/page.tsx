@@ -52,6 +52,10 @@ export default function IncidentsPage() {
 
   const [selectedSection, setSelectedSection] = useState("");
 
+  // Manual entry state
+  const [isManualEntry, setIsManualEntry] = useState(false);
+  const [manualData, setManualData] = useState({ firstName: "", lastName: "", dni: "" });
+
   const [selectedStudent, setSelectedStudent] = useState<any>(null);
   const [severity, setSeverity] = useState<Incident["type"] | null>(null);
   const [description, setDescription] = useState("");
@@ -83,6 +87,64 @@ export default function IncidentsPage() {
     .sort();
 
   const handleNext = () => setStep(step + 1);
+
+  const handleManualSubmit = async () => {
+    if (!manualData.firstName || !manualData.lastName || !selectedGrade || !selectedSection) {
+      toast.error("Por favor complete nombres, apellidos, grado y sección");
+      return;
+    }
+
+    const fName = manualData.firstName.trim().toUpperCase();
+    const lName = manualData.lastName.trim().toUpperCase();
+
+    // Check locally first
+    const existing = dbStudents.find(
+      (s) =>
+        s.first_name?.toUpperCase() === fName &&
+        s.last_name?.toUpperCase() === lName
+    );
+
+    if (existing) {
+      toast.info("El alumno ya existe.", {
+        description: "Se ha seleccionado automáticamente.",
+      });
+      setSelectedStudent(existing);
+      setStep(2);
+      return;
+    }
+
+    try {
+      // Generate random DNI if empty (since it's required in DB but user might not know it)
+      const dni =
+        manualData.dni ||
+        Math.floor(10000000 + Math.random() * 90000000).toString();
+
+      const { data, error } = await supabase
+        .from("students")
+        .insert([
+          {
+            first_name: fName,
+            last_name: lName,
+            dni: dni,
+            grade: selectedGrade,
+            section: selectedSection,
+            is_active: true,
+          },
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setDbStudents((prev) => [...prev, data]);
+      setSelectedStudent(data);
+      toast.success("Alumno registrado y seleccionado");
+      setStep(2);
+    } catch (error: any) {
+      toast.error("Error al crear alumno: " + error.message);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!selectedStudent || !severity || !description) return;
@@ -253,9 +315,19 @@ export default function IncidentsPage() {
           {/* STEP 1: SELECT STUDENT */}
           {step === 1 && (
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 animate-in fade-in slide-in-from-right-4 duration-300">
-              <h2 className="text-lg font-bold mb-4 text-slate-800">
-                1. Identificar Alumno
-              </h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-bold text-slate-800">
+                  1. Identificar Alumno
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsManualEntry(!isManualEntry)}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
+                >
+                  {isManualEntry ? "Buscar Existente" : "Agregar Nuevo"}
+                </Button>
+              </div>
 
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
@@ -298,59 +370,148 @@ export default function IncidentsPage() {
                 </div>
               </div>
 
-              <div className="relative mb-4">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-slate-400" />
-                </div>
-                <input
-                  type="text"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all text-sm"
-                  placeholder="O ingresar nombre directo..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
-              <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                {filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => (
-                    <button
-                      key={student.id}
-                      onClick={() => setSelectedStudent(student)}
-                      className={`w-full text-left p-3 rounded-xl flex items-center justify-between group transition-all border ${selectedStudent?.id === student.id ? "bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200" : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200"}`}
-                    >
+              {isManualEntry ? (
+                <div className="space-y-4 animate-in fade-in">
+                  <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 mb-2">
+                    <p className="text-xs text-indigo-700 mb-2 font-medium">
+                      Ingrese los datos del nuevo estudiante. Si ya existe, se
+                      seleccionará automáticamente.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <p
-                          className={`font-bold text-sm ${selectedStudent?.id === student.id ? "text-indigo-700" : "text-slate-700"}`}
-                        >
-                          {student.first_name} {student.last_name}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {student.grade} - Secc. {student.section}
-                        </p>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">
+                          Nombres
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
+                          value={manualData.firstName}
+                          onChange={(e) =>
+                            setManualData({
+                              ...manualData,
+                              firstName: e.target.value,
+                            })
+                          }
+                          placeholder="Ej. JUAN CARLOS"
+                        />
                       </div>
-                      {selectedStudent?.id === student.id && (
-                        <CheckCircle2 className="w-5 h-5 text-indigo-500" />
-                      )}
-                    </button>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-slate-400 text-sm">
-                    No se encontraron alumnos con los filtros actuales.
+                      <div>
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">
+                          Apellidos
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
+                          value={manualData.lastName}
+                          onChange={(e) =>
+                            setManualData({
+                              ...manualData,
+                              lastName: e.target.value,
+                            })
+                          }
+                          placeholder="Ej. PEREZ LOPEZ"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">
+                          DNI (Opcional - Se generará si está vacío)
+                        </label>
+                        <input
+                          type="text"
+                          className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
+                          value={manualData.dni}
+                          onChange={(e) =>
+                            setManualData({ ...manualData, dni: e.target.value })
+                          }
+                          placeholder="Ej. 12345678"
+                          maxLength={8}
+                        />
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
 
-              <div className="mt-6 flex justify-end">
-                <Button
-                  onClick={handleNext}
-                  disabled={!selectedStudent}
-                  className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
-                >
-                  Siguiente
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleManualSubmit}
+                      disabled={
+                        !selectedGrade ||
+                        !selectedSection ||
+                        !manualData.firstName ||
+                        !manualData.lastName
+                      }
+                      className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
+                    >
+                      Crear y Continuar
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="relative mb-4">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all text-sm"
+                      placeholder="Buscar por nombre..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                    {filteredStudents.length > 0 ? (
+                      filteredStudents.map((student) => (
+                        <button
+                          key={student.id}
+                          onClick={() => setSelectedStudent(student)}
+                          className={`w-full text-left p-3 rounded-xl flex items-center justify-between group transition-all border ${selectedStudent?.id === student.id ? "bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200" : "bg-white border-transparent hover:bg-slate-50 hover:border-slate-200"}`}
+                        >
+                          <div>
+                            <p
+                              className={`font-bold text-sm ${selectedStudent?.id === student.id ? "text-indigo-700" : "text-slate-700"}`}
+                            >
+                              {student.first_name} {student.last_name}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              {student.grade} - Secc. {student.section}
+                            </p>
+                          </div>
+                          {selectedStudent?.id === student.id && (
+                            <CheckCircle2 className="w-5 h-5 text-indigo-500" />
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-slate-400 text-sm flex flex-col items-center">
+                        <p className="mb-2">
+                          No se encontraron alumnos con los filtros actuales.
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsManualEntry(true)}
+                        >
+                          Agregar Manualmente
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-6 flex justify-end">
+                    <Button
+                      onClick={handleNext}
+                      disabled={!selectedStudent}
+                      className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20"
+                    >
+                      Siguiente
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
