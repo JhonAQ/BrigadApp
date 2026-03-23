@@ -127,6 +127,9 @@ export default function PsychologyPage() {
     }
   };
 
+
+  const hasChanges = selectedIncident && notes !== selectedIncident.psych_notes;
+
   return (
     <div className="max-w-6xl mx-auto h-[calc(100vh-6rem)] md:h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 md:mb-6">
@@ -309,9 +312,10 @@ export default function PsychologyPage() {
                     Finalizar y Marcar Atendido
                   </Button>
                 )}
+
                 {/* Explicit save button for reassurance, though auto-save works */}
                 <Button
-                  variant="ghost"
+                  variant={hasChanges ? "primary" : "ghost"}
                   onClick={() => {
                     // Force save immediately
                     const saveNow = async () => {
@@ -321,16 +325,38 @@ export default function PsychologyPage() {
                         .update({ psych_notes: notes })
                         .eq("id", selectedIncident.id);
                       setLastSaved(new Date());
+                      // Manually update local state to reflect saved status
+                       setSelectedIncident((prev: any) => ({
+                         ...prev,
+                         psych_notes: notes,
+                       }));
+                       setIncidents((prev) =>
+                         prev.map((inc) =>
+                           inc.id === selectedIncident.id
+                             ? { ...inc, psych_notes: notes }
+                             : inc,
+                         ),
+                       );
                       setIsSaving(false);
-                      toast.success("Guardado manualexitoso");
+                      toast.success("Guardado exitoso");
                     };
                     saveNow();
                   }}
-                  disabled={isSaving}
-                  className="w-full md:w-auto text-slate-400 hover:text-slate-600"
+                  disabled={isSaving || !hasChanges}
+                  className={`w-full md:w-auto transition-all duration-300 ${
+                    hasChanges
+                      ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-100"
+                      : "text-slate-300 bg-slate-50 hover:bg-slate-50 cursor-not-allowed"
+                  }`}
                 >
-                  <Save className="w-4 h-4 mr-2" />
-                  Guardar
+                   {isSaving ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : lastSaved && !hasChanges ? (
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                   {isSaving ? "Guardando..." : lastSaved && !hasChanges ? "Guardado" : "Guardar Cambios"}
                 </Button>
               </div>
             </>

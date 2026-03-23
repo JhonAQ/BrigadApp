@@ -45,6 +45,7 @@ export default function IncidentsPage() {
   const [historyStatus, setHistoryStatus] = useState("ALL");
   const [historyType, setHistoryType] = useState("ALL");
   const [historyGrade, setHistoryGrade] = useState("ALL");
+  const [historyOrigin, setHistoryOrigin] = useState("ALL");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   // Selection Filters
@@ -61,7 +62,9 @@ export default function IncidentsPage() {
     async function load() {
       const [{ data: st }, { data: inc }, { data: sec }] = await Promise.all([
         supabase.from("students").select("*"),
-        supabase.from("incidents").select("*, students(*)"),
+        supabase
+          .from("incidents")
+          .select("*, students(*), reporter:users!incidents_reporter_id_fkey(*)"),
         supabase.from("sections").select("*"),
       ]);
       if (st) setDbStudents(st);
@@ -134,13 +137,22 @@ export default function IncidentsPage() {
         historyType === "ALL" ? true : inc.type === historyType;
       const matchesGrade =
         historyGrade === "ALL" ? true : inc.students?.grade === historyGrade;
+      const matchesOrigin =
+        historyOrigin === "ALL"
+          ? true
+          : historyOrigin === "PATRULLA"
+            ? inc.reporter?.role === "BRIGADIER_PATRULLA"
+            : historyOrigin === "AULA"
+              ? inc.reporter?.role === "BRIGADIER_AULA"
+              : true;
 
       return (
         matchesSearch &&
         matchesDate &&
         matchesStatus &&
         matchesType &&
-        matchesGrade
+        matchesGrade &&
+        matchesOrigin
       );
     })
     .sort((a, b) => {
@@ -318,10 +330,10 @@ export default function IncidentsPage() {
 
             {/* Main Filters Row */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3">
-              <div className="md:col-span-4">
+              <div className="md:col-span-2">
                 <input
                   type="text"
-                  placeholder="Buscar alumno..."
+                  placeholder="Buscar..."
                   className="w-full p-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-100 outline-none"
                   value={historySearchTerm}
                   onChange={(e) => setHistorySearchTerm(e.target.value)}
@@ -334,11 +346,11 @@ export default function IncidentsPage() {
                   value={historyTimeRange}
                   onChange={(e) => setHistoryTimeRange(e.target.value as any)}
                 >
-                  <option value="ALL">Toda fecha</option>
+                  <option value="ALL">Fecha</option>
                   <option value="TODAY">Hoy</option>
                   <option value="WEEK">Esta Semana</option>
                   <option value="MONTH">Este Mes</option>
-                  <option value="CUSTOM">Elegir fecha...</option>
+                  <option value="CUSTOM">Elegir...</option>
                 </select>
               </div>
 
@@ -348,7 +360,7 @@ export default function IncidentsPage() {
                   value={historyGrade}
                   onChange={(e) => setHistoryGrade(e.target.value)}
                 >
-                  <option value="ALL">Todo Grado</option>
+                  <option value="ALL">Grado</option>
                   {availableGrades.map((g) => (
                     <option key={g} value={g}>
                       {g}
@@ -362,7 +374,7 @@ export default function IncidentsPage() {
                   value={historyStatus}
                   onChange={(e) => setHistoryStatus(e.target.value)}
                 >
-                  <option value="ALL">Todo Estado</option>
+                  <option value="ALL">Estado</option>
                   <option value="PENDIENTE">Pendiente</option>
                   <option value="ATENDIDA">Atendida</option>
                   <option value="ESCALADA">Escalada</option>
@@ -378,6 +390,17 @@ export default function IncidentsPage() {
                   <option value="LEVE">Leve</option>
                   <option value="MODERADA">Moderada</option>
                   <option value="GRAVE">Grave</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <select
+                  className="w-full p-2.5 border border-slate-200 rounded-lg text-sm bg-white outline-none"
+                  value={historyOrigin}
+                  onChange={(e) => setHistoryOrigin(e.target.value)}
+                >
+                  <option value="ALL">Origen</option>
+                  <option value="PATRULLA">Brig. Patrulla</option>
+                  <option value="AULA">Brig. Aula</option>
                 </select>
               </div>
             </div>
@@ -431,6 +454,17 @@ export default function IncidentsPage() {
                         </p>
                         <p className="text-xs text-slate-500">
                           {inc.date} • {inc.time}
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                          <span className="font-medium">Reportado por:</span>
+                          {inc.reporter?.name || "Sistema"}{" "}
+                          {inc.reporter?.role && (
+                            <span className="bg-slate-100 px-1 rounded text-slate-500">
+                              {inc.reporter.role
+                                .replace("BRIGADIER_", "")
+                                .replace("_", " ")}
+                            </span>
+                          )}
                         </p>
                       </div>
                     </div>
