@@ -19,6 +19,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   login: (dni: string, password?: string) => Promise<void>;
+  loginWithQR: (dni: string, id: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -77,6 +78,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginWithQR = async (dni: string, id: string) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("dni", dni)
+        .eq("id", id) // Validamos ID único a forma de seguridad
+        .single();
+
+      if (error || !data) {
+        toast.error("Datos del QR inválidos o no encontrados.");
+        setIsLoading(false);
+        return;
+      }
+
+      setUser(data);
+      localStorage.setItem("brigadapp_user", JSON.stringify(data));
+      toast.success(`Acceso Rápido concedido, ${data.name}`);
+      // Lo mandamos derecho al dashboard de incidencias
+      router.push("/dashboard/incidents");
+    } catch (err: any) {
+      toast.error("Error al procesar acceso rápido con QR");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem("brigadapp_user");
@@ -85,7 +114,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider
+      value={{ user, login, loginWithQR, logout, isLoading }}
+    >
       {children}
     </AuthContext.Provider>
   );
