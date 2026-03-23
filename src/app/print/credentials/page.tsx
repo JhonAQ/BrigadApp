@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { QRCodeSVG } from "qrcode.react";
-import { Shield, School, Printer, ArrowLeft } from "lucide-react";
+import { Shield, School, Download, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 function PrintPreview() {
@@ -49,6 +49,12 @@ function PrintPreview() {
     window.print();
   };
 
+  // Agrupar brigadieres en bloques de 4 para cada página A4
+  const chunkedBrigadiers = [];
+  for (let i = 0; i < brigadiers.length; i += 4) {
+    chunkedBrigadiers.push(brigadiers.slice(i, i + 4));
+  }
+
   return (
     <div className="min-h-screen bg-[#525659] pb-12 print:bg-white print:pb-0">
       {/* HERRAMIENTAS DE IMPRESIÓN (UI NO IMPRIMIBLE) */}
@@ -65,46 +71,22 @@ function PrintPreview() {
           </h1>
         </div>
         <div className="flex items-center gap-4">
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded-md text-xs">
-            <p className="font-bold mb-0.5">
-              ⚠️ Configuración OBLIGATORIA al imprimir:
-            </p>
-            <ul className="list-disc pl-4 font-medium opacity-90">
-              <li>
-                Tamaño de papel: <span className="font-bold">A4</span>
-              </li>
-              <li>
-                Márgenes:{" "}
-                <span className="font-bold text-red-600">Ninguno (None)</span>
-              </li>
-              <li>
-                Escala: <span className="font-bold">Personalizado (100%)</span>
-              </li>
-            </ul>
-          </div>
           <button
             onClick={handlePrint}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold text-sm flex items-center gap-2 shadow-lg transition-transform active:scale-95"
           >
-            <Printer className="w-5 h-5" /> Imprimir ({brigadiers.length})
+            <Download className="w-5 h-5" /> Guardar PDF ({brigadiers.length})
           </button>
         </div>
       </div>
 
-      {/* HOJA A4 VIRTUAL */}
-      <div
-        className="bg-white mx-auto shadow-2xl print:shadow-none print:mx-0 relative"
-        style={{
-          width: "210mm",
-          minHeight: "297mm",
-          padding: "12mm",
-        }}
-      >
+      {/* HOJAS A4 VIRTUALES HORIZONTAL */}
+      <div className="flex flex-col items-center gap-8 print:gap-0 print:block">
         <style
           dangerouslySetInnerHTML={{
             __html: `
                     @media print {
-                        @page { size: A4 portrait; margin: 0; }
+                        @page { size: A4 landscape; margin: 0; }
                         body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                         @page {
                             margin-top: 0mm;
@@ -115,10 +97,15 @@ function PrintPreview() {
           }}
         />
 
-        <div className="flex flex-wrap gap-[10mm] justify-center print:justify-start">
-          {brigadiers.map((b) => {
-            const nameParts = b.name.split(" ");
-            const firstName = nameParts[0] || "";
+        {chunkedBrigadiers.map((pageGroup, pageIndex) => (
+          <div 
+            key={pageIndex} 
+            className="w-[297mm] h-[210mm] p-[10mm] bg-white mx-auto shadow-2xl print:shadow-none mb-8 print:mb-0 print:break-after-page relative box-border"
+          >
+            <div className="grid grid-cols-2 gap-x-[15mm] gap-y-[10mm] justify-items-center print:justify-items-center h-full content-start">
+              {pageGroup.map((b) => {
+                const nameParts = b.name.split(" ");
+                const firstName = nameParts[0] || "";
             const lastName = nameParts.slice(1).join(" ") || " ";
 
             const roleLabels: any = {
@@ -145,7 +132,7 @@ function PrintPreview() {
             return (
               <div
                 key={b.id}
-                className="flex gap-[10mm] print:break-inside-avoid"
+                className="flex gap-[4mm] print:break-inside-avoid justify-center w-full"
               >
                 {/* LADO FRENTE - ASISTENCIA */}
                 <div
@@ -200,8 +187,12 @@ function PrintPreview() {
                           {b.name}
                         </p>
                       </div>
-                      <div className="flex justify-between items-end border-t border-slate-200 pt-1.5 mt-1">
-                        <div className="text-left w-1/2 pr-1 overflow-hidden">
+                      <div
+                        className={`flex items-end border-t border-slate-200 pt-1.5 mt-1 ${b.role !== "BRIGADIER_PATRULLA" ? "justify-between" : "justify-center"}`}
+                      >
+                        <div
+                          className={`${b.role !== "BRIGADIER_PATRULLA" ? "text-left w-1/2 pr-1" : "text-center w-full"} overflow-hidden`}
+                        >
                           <p className="text-[5.5px] text-slate-500 font-bold uppercase truncate">
                             Documento
                           </p>
@@ -212,14 +203,16 @@ function PrintPreview() {
                             {b.dni || b.id}
                           </p>
                         </div>
-                        <div className="text-right w-1/2 pl-1 overflow-hidden">
-                          <p className="text-[5.5px] text-slate-500 font-bold uppercase truncate">
-                            Grupo Asignado
-                          </p>
-                          <p className="text-[7.5px] font-bold text-slate-800 truncate block w-full">
-                            {b.grade ? `${b.grade} ${b.section}` : "General"}
-                          </p>
-                        </div>
+                        {b.role !== "BRIGADIER_PATRULLA" && (
+                          <div className="text-right w-1/2 pl-1 overflow-hidden">
+                            <p className="text-[5.5px] text-slate-500 font-bold uppercase truncate">
+                              Grupo Asignado
+                            </p>
+                            <p className="text-[7.5px] font-bold text-slate-800 truncate block w-full">
+                              {b.grade ? `${b.grade} ${b.section}` : "General"}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -278,7 +271,9 @@ function PrintPreview() {
               </div>
             );
           })}
-        </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
