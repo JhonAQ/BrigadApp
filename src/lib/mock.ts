@@ -17,7 +17,6 @@ export interface User {
 
 export interface Student {
   id: string;
-  dni: string;
   firstName: string;
   lastName: string;
   grade: string;
@@ -49,14 +48,14 @@ export const MOCK_USERS: User[] = [
 ];
 
 export const MOCK_STUDENTS: Student[] = [
-  { id: 's1', dni: '70000001', firstName: 'Carlos', lastName: 'Mendez', grade: '5to', section: 'A', incidentsCount: 0 },
-  { id: 's2', dni: '70000002', firstName: 'Lucia', lastName: 'Fernandez', grade: '4to', section: 'B', incidentsCount: 2 },
-  { id: 's3', dni: '70000003', firstName: 'Pedro', lastName: 'Ramirez', grade: '3ro', section: 'C', incidentsCount: 4 },
-  { id: 's4', dni: '70000004', firstName: 'Elena', lastName: 'Torres', grade: '5to', section: 'A', incidentsCount: 1 },
-  { id: 's5', dni: '70000005', firstName: 'Miguel', lastName: 'Angel', grade: '1ro', section: 'A', incidentsCount: 0 },
-  { id: 's6', dni: '70000006', firstName: 'Ana', lastName: 'Maria', grade: '2do', section: 'B', incidentsCount: 3 },
-  { id: 's7', dni: '70000007', firstName: 'Jose', lastName: 'Luis', grade: '3ro', section: 'A', incidentsCount: 0 },
-  { id: 's8', dni: '70000008', firstName: 'Maria', lastName: 'Jose', grade: '4to', section: 'C', incidentsCount: 0 },
+  { id: 's1', firstName: 'Carlos', lastName: 'Mendez', grade: '5to', section: 'A', incidentsCount: 0 },
+  { id: 's2', firstName: 'Lucia', lastName: 'Fernandez', grade: '4to', section: 'B', incidentsCount: 2 },
+  { id: 's3', firstName: 'Pedro', lastName: 'Ramirez', grade: '3ro', section: 'C', incidentsCount: 4 },
+  { id: 's4', firstName: 'Elena', lastName: 'Torres', grade: '5to', section: 'A', incidentsCount: 1 },
+  { id: 's5', firstName: 'Miguel', lastName: 'Angel', grade: '1ro', section: 'A', incidentsCount: 0 },
+  { id: 's6', firstName: 'Ana', lastName: 'Maria', grade: '2do', section: 'B', incidentsCount: 3 },
+  { id: 's7', firstName: 'Jose', lastName: 'Luis', grade: '3ro', section: 'A', incidentsCount: 0 },
+  { id: 's8', firstName: 'Maria', lastName: 'Jose', grade: '4to', section: 'C', incidentsCount: 0 },
 ];
 
 export const MOCK_INCIDENTS: Incident[] = [

@@ -123,18 +123,12 @@ export default function IncidentsPage() {
     }
 
     try {
-      // Generate random DNI if empty (since it's required in DB but user might not know it)
-      const dni =
-        manualData.dni ||
-        Math.floor(10000000 + Math.random() * 90000000).toString();
-
       const { data, error } = await supabase
         .from("students")
         .insert([
           {
             first_name: fName,
             last_name: lName,
-            dni: dni,
             grade: selectedGrade,
             section: selectedSection,
             is_active: true,
@@ -158,6 +152,22 @@ export default function IncidentsPage() {
   const handleSubmit = async () => {
     if (!selectedStudent || !severity || !description) return;
 
+    const isAuthorized = [
+      "DOCENTE",
+      "BRIGADIER_GENERAL_PRINCIPAL",
+      "BRIGADIER_GENERAL_ALTERNO",
+      "DEVELOPER",
+      "PSYCHOLOGIST",
+    ].includes(user?.role || "");
+
+    let submitStatus = "PENDIENTE";
+    let submitNeedsPsychology = needsPsychology;
+
+    if (needsPsychology && !isAuthorized) {
+      submitStatus = "ESCALADA";
+      submitNeedsPsychology = false; // Prevents it from appearing in Psychology inbox directly
+    }
+
     const { error } = await supabase.from("incidents").insert([
       {
         student_id: selectedStudent.id,
@@ -165,14 +175,20 @@ export default function IncidentsPage() {
         date: new Date().toISOString().split("T")[0],
         time: new Date().toTimeString().split(" ")[0].substring(0, 5),
         description: description,
-        status: "PENDIENTE",
-        needs_psychology: needsPsychology,
+        status: submitStatus,
+        needs_psychology: submitNeedsPsychology,
         reporter_id: user?.id,
       },
     ]);
 
     if (!error) {
-      toast.success("Incidencia registrada correctamente");
+      if (submitStatus === "ESCALADA") {
+        toast.success(
+          "Incidencia enviada a revisión para elevación a psicología.",
+        );
+      } else {
+        toast.success("Incidencia registrada correctamente");
+      }
       // Reload
       const { data } = await supabase
         .from("incidents")
@@ -262,7 +278,7 @@ export default function IncidentsPage() {
                       {inc.description}
                     </p>
 
-                    {inc.needs_psychology && (
+                    {(inc.needs_psychology || inc.status === "ESCALADA") && (
                       <div className="mt-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs font-bold uppercase text-indigo-700 flex items-center gap-1">
@@ -280,14 +296,18 @@ export default function IncidentsPage() {
                               <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                               <circle cx="12" cy="7" r="4" />
                             </svg>
-                            Derivado a Psicología
+                            {inc.status === "ESCALADA"
+                              ? "Solicitud de Psicología"
+                              : "Derivado a Psicología"}
                           </span>
                           <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${inc.status === "ATENDIDA" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${inc.status === "ATENDIDA" ? "bg-emerald-100 text-emerald-700" : inc.status === "ESCALADA" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}
                           >
                             {inc.status === "ATENDIDA"
                               ? "ATENDIDO"
-                              : "PENDIENTE"}
+                              : inc.status === "ESCALADA"
+                                ? "EN REVISIÓN"
+                                : "PENDIENTE"}
                           </span>
                         </div>
                         {inc.status === "ATENDIDA" && inc.psych_notes && (
@@ -421,24 +441,6 @@ export default function IncidentsPage() {
                           placeholder="Ej. PEREZ LOPEZ"
                         />
                       </div>
-                      <div className="col-span-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">
-                          DNI (Opcional - Se generará si está vacío)
-                        </label>
-                        <input
-                          type="text"
-                          className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500"
-                          value={manualData.dni}
-                          onChange={(e) =>
-                            setManualData({
-                              ...manualData,
-                              dni: e.target.value,
-                            })
-                          }
-                          placeholder="Ej. 12345678"
-                          maxLength={8}
-                        />
-                      </div>
                     </div>
                   </div>
 
@@ -502,7 +504,7 @@ export default function IncidentsPage() {
                           No se encontraron alumnos con los filtros actuales.
                         </p>
                         <Button
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
                           onClick={() => setIsManualEntry(true)}
                         >

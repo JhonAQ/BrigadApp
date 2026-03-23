@@ -62,6 +62,16 @@ export function Sidebar() {
       ],
     },
     {
+      title: "Elevaciones",
+      href: "/dashboard/elevated",
+      icon: ShieldCheck,
+      roles: [
+        "BRIGADIER_GENERAL_PRINCIPAL",
+        "BRIGADIER_GENERAL_ALTERNO",
+        "DOCENTE",
+      ],
+    },
+    {
       title: "Psicología",
       href: "/dashboard/psychology",
       icon: BrainCircuit,
