@@ -55,15 +55,19 @@ export default function AttendanceReportPage() {
     const range = (() => {
       const monthStart = startOfMonth(currentDate).toISOString().slice(0, 10);
       const monthEnd = endOfMonth(currentDate).toISOString().slice(0, 10);
-      
+
       let viewStart, viewEnd;
 
       if (viewMode === "day") {
         viewStart = startOfDay(currentDate).toISOString().slice(0, 10);
         viewEnd = endOfDay(currentDate).toISOString().slice(0, 10);
       } else if (viewMode === "week") {
-        viewStart = startOfWeek(currentDate, { weekStartsOn: 1 }).toISOString().slice(0, 10);
-        viewEnd = endOfWeek(currentDate, { weekStartsOn: 1 }).toISOString().slice(0, 10);
+        viewStart = startOfWeek(currentDate, { weekStartsOn: 1 })
+          .toISOString()
+          .slice(0, 10);
+        viewEnd = endOfWeek(currentDate, { weekStartsOn: 1 })
+          .toISOString()
+          .slice(0, 10);
       } else {
         viewStart = monthStart;
         viewEnd = monthEnd;
@@ -71,7 +75,7 @@ export default function AttendanceReportPage() {
 
       return {
         start: viewStart < monthStart ? viewStart : monthStart,
-        end: viewEnd > monthEnd ? viewEnd : monthEnd
+        end: viewEnd > monthEnd ? viewEnd : monthEnd,
       };
     })();
 
@@ -157,17 +161,19 @@ export default function AttendanceReportPage() {
   const calculateMonthlyStats = (userId: string) => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
-    
-    const userMonthAtt = attendances.filter(a => {
+
+    const userMonthAtt = attendances.filter((a) => {
       const dateStr = a.date || a.scanned_at || a.created_at;
       if (!dateStr) return false;
-      const parsed = parseISO(typeof dateStr === "string" ? dateStr : new Date(dateStr).toISOString());
+      const parsed = parseISO(
+        typeof dateStr === "string" ? dateStr : new Date(dateStr).toISOString(),
+      );
       return a.user_id === userId && parsed >= monthStart && parsed <= monthEnd;
     });
 
     return {
-      tardies: userMonthAtt.filter(a => !a.on_time).length,
-      incompleteUniform: userMonthAtt.filter(a => !a.uniform_complete).length
+      tardies: userMonthAtt.filter((a) => !a.on_time).length,
+      incompleteUniform: userMonthAtt.filter((a) => !a.uniform_complete).length,
     };
   };
 
@@ -182,19 +188,25 @@ export default function AttendanceReportPage() {
     ];
     // Add monthly stats columns after role
     // New Structure: Brigadier | DNI | Rol | Tardanzas (Mes) | Faltas Indum (Mes) | ...Days... | ...Summary...
-    
+
     // We update userMap to only be used for the final summary columns if needed, OR we can recalculate everything per row
     // Actually the summary columns at the end are for the VIEW range usually? Or are they total?
     // Let's assume the Summary columns at the end are for the VIEWED range as before.
-    
+
     const userMap = users.reduce(
       (acc, u) => {
         // Filter attendances for the days being shown (daysInRange)
-        const relevantAtt = attendances.filter(a => {
-           const dateStr = a.date || a.scanned_at || a.created_at;
-           if (!dateStr) return false;
-           const parsed = parseISO(typeof dateStr === "string" ? dateStr : new Date(dateStr).toISOString());
-           return a.user_id === u.id && daysInRange.some(d => isSameDay(d, parsed));
+        const relevantAtt = attendances.filter((a) => {
+          const dateStr = a.date || a.scanned_at || a.created_at;
+          if (!dateStr) return false;
+          const parsed = parseISO(
+            typeof dateStr === "string"
+              ? dateStr
+              : new Date(dateStr).toISOString(),
+          );
+          return (
+            a.user_id === u.id && daysInRange.some((d) => isSameDay(d, parsed))
+          );
         });
 
         acc[u.id] = {
@@ -237,16 +249,17 @@ export default function AttendanceReportPage() {
         uniformComplete: 0,
       };
       const viewTardy = viewMetrics.total - viewMetrics.punctual;
-      const viewUniformIncomplete = viewMetrics.total - viewMetrics.uniformComplete;
+      const viewUniformIncomplete =
+        viewMetrics.total - viewMetrics.uniformComplete;
 
       const monthlyStats = calculateMonthlyStats(user.id);
 
       const row = [
-        user.name, 
-        user.dni || "", 
-        user.role, 
-        monthlyStats.tardies, 
-        monthlyStats.incompleteUniform
+        user.name,
+        user.dni || "",
+        user.role,
+        monthlyStats.tardies,
+        monthlyStats.incompleteUniform,
       ];
 
       daysInRange.forEach((day) => {
@@ -273,7 +286,10 @@ export default function AttendanceReportPage() {
 
     const headerFill = { patternType: "solid", fgColor: { rgb: "EEF2FF" } }; // Indigo-50
     const summaryFill = { patternType: "solid", fgColor: { rgb: "ECFEFF" } }; // Cyan-50
-    const monthlyStatsFill = { patternType: "solid", fgColor: { rgb: "FEF3C7" } }; // Amber-50
+    const monthlyStatsFill = {
+      patternType: "solid",
+      fgColor: { rgb: "FEF3C7" },
+    }; // Amber-50
     const borderThin = {
       top: { style: "thin", color: { rgb: "CBD5E1" } },
       bottom: { style: "thin", color: { rgb: "CBD5E1" } },
@@ -297,7 +313,7 @@ export default function AttendanceReportPage() {
       { wch: 18 }, // Rol
       { wch: 15 }, // Tardanzas Mes
       { wch: 18 }, // Faltas Indum Mes
-      ...dayHeaders.map(() => ({ wch: 8 })), 
+      ...dayHeaders.map(() => ({ wch: 8 })),
       { wch: 10 }, // Total
       { wch: 10 }, // Puntuales
       { wch: 10 }, // Tardanzas
@@ -337,11 +353,11 @@ export default function AttendanceReportPage() {
     const letters = colLetters(titleCols + 1);
     for (let c = 0; c <= titleCols; c++) {
       const ref = `${letters[c]}${headerRow}`;
-      
+
       let fill = headerFill;
       // Monthly stats headers are at index 3 and 4
       if (c === 3 || c === 4) fill = monthlyStatsFill;
-      
+
       applyStyle(ref, {
         font: { bold: true, color: { rgb: "1F2937" } },
         alignment: { horizontal: "center", vertical: "center", wrapText: true },
@@ -360,10 +376,10 @@ export default function AttendanceReportPage() {
       for (let c = 0; c <= titleCols; c++) {
         const ref = `${letters[c]}${r}`;
         if (!ws[ref]) continue;
-        
+
         const isMonthlyStat = c === 3 || c === 4;
         const isSummaryCol = c >= summaryStartIndex;
-        
+
         let fill = undefined;
         if (isMonthlyStat) fill = monthlyStatsFill;
         if (isSummaryCol) fill = summaryFill;

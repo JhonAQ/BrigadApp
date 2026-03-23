@@ -25,42 +25,91 @@ export default function DashboardPage() {
     incidentsToday: 0,
     recentIncidents: [] as any[],
   });
+  const [personalStats, setPersonalStats] = useState({
+    tardanzas: 0,
+    faltasIndumentaria: 0,
+    incidenciasReportadas: 0,
+  });
 
   useEffect(() => {
+    if (!user) return;
+
     if (
-      user?.role?.includes("BRIGADIER") ||
-      user?.role === "DOCENTE" ||
-      user?.role === "DEVELOPER"
+      ["BRIGADIER_GENERAL_PRINCIPAL", "BRIGADIER_GENERAL_ALTERNO", "DOCENTE", "DEVELOPER"].includes(user.role)
     ) {
-      fetchDashboardData();
+      fetchAdminData();
+    } else if (["BRIGADIER_AULA", "BRIGADIER_PATRULLA"].includes(user.role)) {
+      fetchPersonalStats();
     }
   }, [user]);
 
-  const fetchDashboardData = async () => {
-    const today = new Date().toLocaleDateString("es-PE", {
-      timeZone: "America/Lima",
-    });
+  const fetchAdminData = async () => {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD local logic simplified
 
     const { data: recent } = await supabase
       .from("incidents")
       .select("*, students(*)")
       .order("created_at", { ascending: false })
       .limit(6);
+    
+    // Quick fix for "today" incidents without relying on complex timezone logic for this demo
+    // Ideally use created_at >= today's start
+    const todayCount = recent?.filter((r: any) => r.date === today)?.length || 0;
 
     if (recent) {
       setStats({
-        incidentsToday: recent.filter((r: any) => r.date === today).length,
+        incidentsToday: todayCount,
         recentIncidents: recent,
       });
     }
   };
 
+  const fetchPersonalStats = async () => {
+    if (!user) return;
+    
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+
+    // Attendance stats
+    const { data: attendanceData } = await supabase
+      .from("attendance")
+      .select("*")
+      .eq("user_id", user.id)
+      .gte("date", startOfMonth)
+      .lte("date", endOfMonth);
+    
+    const tardanzas = attendanceData?.filter(a => !a.on_time).length || 0;
+    const faltasIndumentaria = attendanceData?.filter(a => !a.uniform_complete).length || 0;
+
+    // Incidents reported by this user (activity)
+    const { count: incidenciasReportadas } = await supabase
+      .from("incidents")
+      .select("id", { count: 'exact' })
+      .eq("reporter_id", user.id)
+      .gte("date", startOfMonth)
+      .lte("date", endOfMonth);
+
+    setPersonalStats({
+      tardanzas,
+      faltasIndumentaria,
+      incidenciasReportadas: incidenciasReportadas || 0
+    });
+  };
+
   if (!user) return null;
 
-  const isPrivileged =
-    user.role.includes("BRIGADIER") ||
-    user.role === "DOCENTE" ||
-    user.role === "DEVELOPER";
+  const isAdminReviewer = [
+    "BRIGADIER_GENERAL_PRINCIPAL", 
+    "BRIGADIER_GENERAL_ALTERNO", 
+    "DOCENTE", 
+    "DEVELOPER"
+  ].includes(user.role);
+
+  const isBrigadierWorker = [
+    "BRIGADIER_AULA", 
+    "BRIGADIER_PATRULLA"
+  ].includes(user.role);
 
   return (
     <div className="flex flex-col h-full space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
@@ -68,15 +117,16 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Panel de Control
+            {isAdminReviewer ? "Panel de Control" : "Mi Resumen"}
           </h1>
           <p className="text-slate-500 text-sm mt-1">
-            Resumen operativo y gestión de accesos (
-            {user.role.replace(/_/g, " ")})
+            {isAdminReviewer
+              ? `Resumen operativo y gestión de accesos (${user.role.replace(/_/g, " ")})`
+              : `Bienvenido, ${user.name}. Aquí tienes tu actividad mensual.`}
           </p>
         </div>
 
-        {isPrivileged && (
+        {isAdminReviewer && (
           <div className="flex items-center gap-2">
             <Link href="/dashboard/incidents">
               <Button className="bg-slate-900 hover:bg-slate-800 text-white shadow-sm flex items-center gap-2 h-9 px-4 rounded-md text-sm">
@@ -88,8 +138,58 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* MÉTRICAS CLAVE (KPIs) */}
-      {isPrivileged && (
+      {/* VISTA PARA BRIGADIERES (AULA / PATRULLA) - ESTADÍSTICAS PERSONALES */}
+      {isBrigadierWorker && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center text-center">
+            <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mb-3">
+              <Clock className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-widest">
+              Tardanzas (Mes)
+            </h3>
+            <p className="text-4xl font-bold text-slate-800 mt-2">
+              {personalStats.tardanzas}
+            </p>
+            <p className="text-xs text-slate-400 mt-2">
+              Llegadas tarde registradas
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center text-center">
+            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-3">
+              <UserCheck className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-widest">
+              Faltas Indumentaria
+            </h3>
+            <p className="text-4xl font-bold text-slate-800 mt-2">
+              {personalStats.faltasIndumentaria}
+            </p>
+            <p className="text-xs text-slate-400 mt-2">
+              Este mes
+            </p>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center text-center">
+            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-3">
+              <ClipboardList className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-widest">
+              Incidencias Reportadas
+            </h3>
+            <p className="text-4xl font-bold text-slate-800 mt-2">
+              {personalStats.incidenciasReportadas}
+            </p>
+            <p className="text-xs text-slate-400 mt-2">
+              Trabajo realizado este mes
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* VISTA PARA ADMINS / DOCENTES - KPIs GLOBALES */}
+      {isAdminReviewer && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm flex items-center justify-between">
             <div>
@@ -140,7 +240,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-col flex-1">
-              {stats.recentIncidents.length === 0 && isPrivileged ? (
+              {stats.recentIncidents.length === 0 && isAdminReviewer ? (
                 <div className="p-8 text-center text-slate-500 text-sm h-full flex items-center justify-center">
                   No hay registros de infracciones recientes en el sistema.
                 </div>
@@ -179,7 +279,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
-              {!isPrivileged && (
+              {!isAdminReviewer && (
                 <div className="p-8 text-center text-slate-500 text-sm">
                   Tu cuenta no tiene privilegios para examinar el historial
                   general.
@@ -224,7 +324,10 @@ export default function DashboardPage() {
                 />
               )}
 
-              {(user.role.includes("BRIGADIER") ||
+              {((user.role.includes("BRIGADIER") &&
+                !["BRIGADIER_AULA", "BRIGADIER_PATRULLA"].includes(
+                  user.role,
+                )) ||
                 user.role === "DOCENTE" ||
                 user.role === "DEVELOPER") && (
                 <ModuleAction

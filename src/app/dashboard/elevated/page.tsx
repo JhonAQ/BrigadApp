@@ -253,10 +253,14 @@ export default function ElevatedIncidentsPage() {
               variant={modalType === "APPROVE" ? "primary" : "danger"}
               onClick={confirmAction}
               className={
-                modalType === "APPROVE" ? "bg-indigo-600 hover:bg-indigo-700" : ""
+                modalType === "APPROVE"
+                  ? "bg-indigo-600 hover:bg-indigo-700"
+                  : ""
               }
             >
-              {modalType === "APPROVE" ? "Confirmar Envío" : "Confirmar Rechazo"}
+              {modalType === "APPROVE"
+                ? "Confirmar Envío"
+                : "Confirmar Rechazo"}
             </Button>
           </div>
         </div>

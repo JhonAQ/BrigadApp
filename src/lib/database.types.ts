@@ -19,16 +19,25 @@ export type Database = {
           created_at: string | null
           id: string
           user_id: string | null
+          uniform_complete: boolean | null
+          on_time: boolean | null
+          date: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           user_id?: string | null
+          uniform_complete?: boolean | null
+          on_time?: boolean | null
+          date?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           user_id?: string | null
+          uniform_complete?: boolean | null
+          on_time?: boolean | null
+          date?: string | null
         }
         Relationships: [
           {

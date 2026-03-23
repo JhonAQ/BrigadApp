@@ -90,8 +90,6 @@ export function Sidebar() {
       href: "/dashboard/attendance-report",
       icon: CalendarDays,
       roles: [
-        "BRIGADIER_AULA",
-        "BRIGADIER_PATRULLA",
         "BRIGADIER_GENERAL_ALTERNO",
         "BRIGADIER_GENERAL_PRINCIPAL",
         "DOCENTE",

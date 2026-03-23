@@ -24,9 +24,12 @@ export default function AttendancePage() {
 
   const canConfigure =
     user &&
-    ["DEVELOPER", "BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE", "COORDINADOR"].includes(
-      user.role
-    );
+    [
+      "DEVELOPER",
+      "BRIGADIER_GENERAL_PRINCIPAL",
+      "DOCENTE",
+      "COORDINADOR",
+    ].includes(user.role);
 
   // Scanner State
   const webcamRef = useRef<Webcam>(null);
@@ -227,7 +230,7 @@ export default function AttendancePage() {
           >
             <Camera className="w-4 h-4" /> Escáner
           </button>
-          
+
           {canConfigure && (
             <button
               onClick={() => setActiveTab("config")}
