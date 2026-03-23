@@ -64,7 +64,9 @@ export default function IncidentsPage() {
         supabase.from("students").select("*"),
         supabase
           .from("incidents")
-          .select("*, students(*), reporter:users!incidents_reporter_id_fkey(*)"),
+          .select(
+            "*, students(*), reporter:users!incidents_reporter_id_fkey(*)",
+          ),
         supabase.from("sections").select("*"),
       ]);
       if (st) setDbStudents(st);

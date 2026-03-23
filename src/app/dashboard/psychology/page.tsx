@@ -127,7 +127,6 @@ export default function PsychologyPage() {
     }
   };
 
-
   const hasChanges = selectedIncident && notes !== selectedIncident.psych_notes;
 
   return (
@@ -326,17 +325,17 @@ export default function PsychologyPage() {
                         .eq("id", selectedIncident.id);
                       setLastSaved(new Date());
                       // Manually update local state to reflect saved status
-                       setSelectedIncident((prev: any) => ({
-                         ...prev,
-                         psych_notes: notes,
-                       }));
-                       setIncidents((prev) =>
-                         prev.map((inc) =>
-                           inc.id === selectedIncident.id
-                             ? { ...inc, psych_notes: notes }
-                             : inc,
-                         ),
-                       );
+                      setSelectedIncident((prev: any) => ({
+                        ...prev,
+                        psych_notes: notes,
+                      }));
+                      setIncidents((prev) =>
+                        prev.map((inc) =>
+                          inc.id === selectedIncident.id
+                            ? { ...inc, psych_notes: notes }
+                            : inc,
+                        ),
+                      );
                       setIsSaving(false);
                       toast.success("Guardado exitoso");
                     };
@@ -349,14 +348,18 @@ export default function PsychologyPage() {
                       : "text-slate-300 bg-slate-50 hover:bg-slate-50 cursor-not-allowed"
                   }`}
                 >
-                   {isSaving ? (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : lastSaved && !hasChanges ? (
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                    ) : (
-                      <Save className="w-4 h-4 mr-2" />
-                    )}
-                   {isSaving ? "Guardando..." : lastSaved && !hasChanges ? "Guardado" : "Guardar Cambios"}
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : lastSaved && !hasChanges ? (
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  {isSaving
+                    ? "Guardando..."
+                    : lastSaved && !hasChanges
+                      ? "Guardado"
+                      : "Guardar Cambios"}
                 </Button>
               </div>
             </>
