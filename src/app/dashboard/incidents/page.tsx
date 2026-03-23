@@ -22,11 +22,26 @@ import {
 import { MOCK_STUDENTS, Incident, getGrades, getSections } from "@/lib/mock";
 import { toast } from "sonner";
 
+const HISTORY_ALLOWED_ROLES = [
+  "COORDINADOR",
+  "BRIGADIER_GENERAL_PRINCIPAL",
+  "BRIGADIER_GENERAL_ALTERNO",
+  "DOCENTE",
+  "DEVELOPER",
+];
+
 export default function IncidentsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"NEW" | "HISTORY">("NEW");
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // History Filters
+  const [historySearchTerm, setHistorySearchTerm] = useState("");
+  const [historyDate, setHistoryDate] = useState("");
+  const [historyStatus, setHistoryStatus] = useState("ALL");
+  const [historyType, setHistoryType] = useState("ALL");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   // Selection Filters
   const [selectedGrade, setSelectedGrade] = useState("");
@@ -35,6 +50,8 @@ export default function IncidentsPage() {
   const [dbIncidents, setDbIncidents] = useState<any[]>([]);
   const [dbSections, setDbSections] = useState<any[]>([]);
   const [needsPsychology, setNeedsPsychology] = useState(false);
+
+  const canViewHistory = HISTORY_ALLOWED_ROLES.includes(user?.role || "");
 
   useEffect(() => {
     async function load() {
@@ -64,9 +81,6 @@ export default function IncidentsPage() {
   const [severity, setSeverity] = useState<Incident["type"] | null>(null);
   const [description, setDescription] = useState("");
 
-  // Mock History
-  const [history, setHistory] = useState<any[]>([]);
-
   const filteredStudents = dbStudents.filter((s) => {
     // If user typed something, search everywhere
     if (searchTerm.length > 0) {
@@ -81,6 +95,27 @@ export default function IncidentsPage() {
     if (selectedSection && s.section !== selectedSection) return false;
     return true;
   });
+
+  const filteredHistory = dbIncidents
+    .filter((inc) => {
+      const studentName =
+        `${inc.students?.first_name} ${inc.students?.last_name}`.toLowerCase();
+      const matchesSearch = studentName.includes(historySearchTerm.toLowerCase());
+      const matchesDate = historyDate ? inc.date === historyDate : true;
+      const matchesStatus =
+        historyStatus === "ALL" ? true : inc.status === historyStatus;
+      const matchesType =
+        historyType === "ALL" ? true : inc.type === historyType;
+
+      return matchesSearch && matchesDate && matchesStatus && matchesType;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(`${a.date}T${a.time}`);
+      const dateB = new Date(`${b.date}T${b.time}`);
+      return sortOrder === "desc"
+        ? dateB.getTime() - dateA.getTime()
+        : dateA.getTime() - dateB.getTime();
+    });
 
   const availableGrades = Array.from(
     new Set(dbSections.map((s: any) => s.grade)),
@@ -225,28 +260,80 @@ export default function IncidentsPage() {
           >
             Nueva
           </button>
-          <button
-            onClick={() => setActiveTab("HISTORY")}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === "HISTORY" ? "bg-white shadow text-slate-900" : "text-slate-500"}`}
-          >
-            Historial
-          </button>
+          {canViewHistory && (
+            <button
+              onClick={() => setActiveTab("HISTORY")}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeTab === "HISTORY" ? "bg-white shadow text-slate-900" : "text-slate-500"}`}
+            >
+              Historial
+            </button>
+          )}
         </div>
       </div>
 
-      {activeTab === "HISTORY" && (
+      {activeTab === "HISTORY" && canViewHistory && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-in fade-in">
-          <div className="p-6 text-center border-b border-slate-100 bg-slate-50/50">
-            <h3 className="font-bold text-slate-700">Incidencias Recientes</h3>
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="font-bold text-slate-700 mb-4">
+              Historial de Incidencias
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <input
+                type="text"
+                placeholder="Buscar alumno..."
+                className="p-2 border border-slate-200 rounded-lg text-sm md:col-span-2"
+                value={historySearchTerm}
+                onChange={(e) => setHistorySearchTerm(e.target.value)}
+              />
+              <input
+                type="date"
+                className="p-2 border border-slate-200 rounded-lg text-sm"
+                value={historyDate}
+                onChange={(e) => setHistoryDate(e.target.value)}
+              />
+              <select
+                className="p-2 border border-slate-200 rounded-lg text-sm"
+                value={historyStatus}
+                onChange={(e) => setHistoryStatus(e.target.value)}
+              >
+                <option value="ALL">Todo Estado</option>
+                <option value="PENDIENTE">Pendiente</option>
+                <option value="ATENDIDA">Atendida</option>
+                <option value="ESCALADA">Escalada</option>
+              </select>
+              <select
+                className="p-2 border border-slate-200 rounded-lg text-sm"
+                value={historyType}
+                onChange={(e) => setHistoryType(e.target.value)}
+              >
+                <option value="ALL">Todo Tipo</option>
+                <option value="LEVE">Leve</option>
+                <option value="MODERADA">Moderada</option>
+                <option value="GRAVE">Grave</option>
+              </select>
+            </div>
+            <div className="flex justify-between items-center mt-3">
+              <span className="text-xs text-slate-500">
+                Mostrando {filteredHistory.length} registros
+              </span>
+              <button
+                onClick={() =>
+                  setSortOrder(sortOrder === "desc" ? "asc" : "desc")
+                }
+                className="text-xs font-semibold text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded"
+              >
+                Orden: {sortOrder === "desc" ? "Más recientes" : "Más antiguos"}
+              </button>
+            </div>
           </div>
           <div className="divide-y divide-slate-100">
-            {dbIncidents.length === 0 ? (
+            {filteredHistory.length === 0 ? (
               <div className="p-8 text-center text-slate-400">
                 <History className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No has registrado incidencias hoy.</p>
+                <p>No se encontraron incidencias con estos filtros.</p>
               </div>
             ) : (
-              dbIncidents.map((inc) => (
+              filteredHistory.map((inc) => (
                 <div
                   key={inc.id}
                   className="p-4 flex flex-col hover:bg-slate-50 gap-2"
