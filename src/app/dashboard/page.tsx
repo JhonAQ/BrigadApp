@@ -35,7 +35,12 @@ export default function DashboardPage() {
     if (!user) return;
 
     if (
-      ["BRIGADIER_GENERAL_PRINCIPAL", "BRIGADIER_GENERAL_ALTERNO", "DOCENTE", "DEVELOPER"].includes(user.role)
+      [
+        "BRIGADIER_GENERAL_PRINCIPAL",
+        "BRIGADIER_GENERAL_ALTERNO",
+        "DOCENTE",
+        "DEVELOPER",
+      ].includes(user.role)
     ) {
       fetchAdminData();
     } else if (["BRIGADIER_AULA", "BRIGADIER_PATRULLA"].includes(user.role)) {
@@ -51,10 +56,11 @@ export default function DashboardPage() {
       .select("*, students(*)")
       .order("created_at", { ascending: false })
       .limit(6);
-    
+
     // Quick fix for "today" incidents without relying on complex timezone logic for this demo
     // Ideally use created_at >= today's start
-    const todayCount = recent?.filter((r: any) => r.date === today)?.length || 0;
+    const todayCount =
+      recent?.filter((r: any) => r.date === today)?.length || 0;
 
     if (recent) {
       setStats({
@@ -66,10 +72,18 @@ export default function DashboardPage() {
 
   const fetchPersonalStats = async () => {
     if (!user) return;
-    
+
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+    const startOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1,
+    ).toISOString();
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+    ).toISOString();
 
     // Attendance stats
     const { data: attendanceData } = await supabase
@@ -78,14 +92,15 @@ export default function DashboardPage() {
       .eq("user_id", user.id)
       .gte("date", startOfMonth)
       .lte("date", endOfMonth);
-    
-    const tardanzas = attendanceData?.filter(a => !a.on_time).length || 0;
-    const faltasIndumentaria = attendanceData?.filter(a => !a.uniform_complete).length || 0;
+
+    const tardanzas = attendanceData?.filter((a) => !a.on_time).length || 0;
+    const faltasIndumentaria =
+      attendanceData?.filter((a) => !a.uniform_complete).length || 0;
 
     // Incidents reported by this user (activity)
     const { count: incidenciasReportadas } = await supabase
       .from("incidents")
-      .select("id", { count: 'exact' })
+      .select("id", { count: "exact" })
       .eq("reporter_id", user.id)
       .gte("date", startOfMonth)
       .lte("date", endOfMonth);
@@ -93,23 +108,22 @@ export default function DashboardPage() {
     setPersonalStats({
       tardanzas,
       faltasIndumentaria,
-      incidenciasReportadas: incidenciasReportadas || 0
+      incidenciasReportadas: incidenciasReportadas || 0,
     });
   };
 
   if (!user) return null;
 
   const isAdminReviewer = [
-    "BRIGADIER_GENERAL_PRINCIPAL", 
-    "BRIGADIER_GENERAL_ALTERNO", 
-    "DOCENTE", 
-    "DEVELOPER"
+    "BRIGADIER_GENERAL_PRINCIPAL",
+    "BRIGADIER_GENERAL_ALTERNO",
+    "DOCENTE",
+    "DEVELOPER",
   ].includes(user.role);
 
-  const isBrigadierWorker = [
-    "BRIGADIER_AULA", 
-    "BRIGADIER_PATRULLA"
-  ].includes(user.role);
+  const isBrigadierWorker = ["BRIGADIER_AULA", "BRIGADIER_PATRULLA"].includes(
+    user.role,
+  );
 
   return (
     <div className="flex flex-col h-full space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto">
@@ -166,9 +180,7 @@ export default function DashboardPage() {
             <p className="text-4xl font-bold text-slate-800 mt-2">
               {personalStats.faltasIndumentaria}
             </p>
-            <p className="text-xs text-slate-400 mt-2">
-              Este mes
-            </p>
+            <p className="text-xs text-slate-400 mt-2">Este mes</p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center text-center">
