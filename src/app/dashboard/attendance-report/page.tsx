@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import * as XLSX from "xlsx-js-style";
 
 type CellStyle = any;
+import { useAuth } from "@/lib/auth-context";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import {
   Download,
   CalendarDays,
@@ -31,24 +34,43 @@ import {
 import { es } from "date-fns/locale";
 
 export default function AttendanceReportPage() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
   const [attendances, setAttendances] = useState<any[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [relationTried, setRelationTried] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
+  const [roleFilter, setRoleFilter] = useState<string>("TODOS");
+
+  const authorizedRoles = [
+    "DOCENTE",
+    "BRIGADIER_GENERAL_PRINCIPAL",
+    "DEVELOPER",
+  ];
 
   useEffect(() => {
-    fetchData();
-  }, [currentDate, viewMode]);
+    if (user && !authorizedRoles.includes(user.role || "")) {
+      router.push("/dashboard");
+      toast.error("No tienes permisos para acceder a esta sección.");
+    } else {
+      fetchData();
+    }
+  }, [currentDate, viewMode, user]);
 
   const fetchData = async () => {
     setLoading(true);
 
     const { data: usersData } = await supabase
       .from("users")
-      .select("id,name,dni,role")
-      .in("role", ["BRIGADIER_AULA", "BRIGADIER_PATRULLA"])
+      .select("id,name,dni,role,grade,section")
+      .in("role", [
+        "BRIGADIER_AULA",
+        "BRIGADIER_PATRULLA",
+        "BRIGADIER_GENERAL_PRINCIPAL",
+        "BRIGADIER_GENERAL_ALTERNO",
+      ])
       .order("name");
     if (usersData) setUsers(usersData);
 
@@ -84,7 +106,7 @@ export default function AttendanceReportPage() {
         .from("attendance")
         .select(
           `id,date,created_at,uniform_complete,on_time,user_id,
-          user:users!${relation}(id,name,dni,role)`,
+          user:users!${relation}(id,name,dni,role,grade,section)`,
         )
         .gte("date", range.start)
         .lte("date", range.end);
@@ -150,13 +172,26 @@ export default function AttendanceReportPage() {
     });
   };
 
+  const filteredUsers = useMemo(() => {
+    if (roleFilter === "TODOS") return users;
+    if (roleFilter === "GENERALES") {
+      return users.filter(u => u.role.includes("GENERAL"));
+    }
+    return users.filter((u) => u.role === roleFilter);
+  }, [users, roleFilter]);
+
+  const filteredAttendances = useMemo(() => {
+    const userIds = new Set(filteredUsers.map(u => u.id));
+    return attendances.filter(a => userIds.has(a.user_id));
+  }, [attendances, filteredUsers]);
+
   const stats = useMemo(() => {
-    const total = attendances.length;
-    const punctual = attendances.filter((a) => a.on_time).length;
+    const total = filteredAttendances.length;
+    const punctual = filteredAttendances.filter((a) => a.on_time).length;
     const late = total - punctual;
-    const uniformOk = attendances.filter((a) => a.uniform_complete).length;
+    const uniformOk = filteredAttendances.filter((a) => a.uniform_complete).length;
     return { total, punctual, late, uniformOk };
-  }, [attendances]);
+  }, [filteredAttendances]);
 
   const calculateMonthlyStats = (userId: string) => {
     const monthStart = startOfMonth(currentDate);
@@ -193,10 +228,10 @@ export default function AttendanceReportPage() {
     // Actually the summary columns at the end are for the VIEW range usually? Or are they total?
     // Let's assume the Summary columns at the end are for the VIEWED range as before.
 
-    const userMap = users.reduce(
+    const userMap = filteredUsers.reduce(
       (acc, u) => {
         // Filter attendances for the days being shown (daysInRange)
-        const relevantAtt = attendances.filter((a) => {
+        const relevantAtt = filteredAttendances.filter((a) => {
           const dateStr = a.date || a.scanned_at || a.created_at;
           if (!dateStr) return false;
           const parsed = parseISO(
@@ -227,6 +262,7 @@ export default function AttendanceReportPage() {
       "Brigadier",
       "DNI",
       "Rol",
+      "Sección",
       "Tardanzas (Mes)",
       "Faltas Indum. (Mes)",
       ...dayHeaders,
@@ -242,7 +278,7 @@ export default function AttendanceReportPage() {
 
     aoa.push(headerRowValues);
 
-    users.forEach((user) => {
+    filteredUsers.forEach((user) => {
       const viewMetrics = userMap[user.id] || {
         total: 0,
         punctual: 0,
@@ -258,6 +294,7 @@ export default function AttendanceReportPage() {
         user.name,
         user.dni || "",
         user.role,
+        user.grade ? `${user.grade} ${user.section}` : "-",
         monthlyStats.tardies,
         monthlyStats.incompleteUniform,
       ];
@@ -311,6 +348,7 @@ export default function AttendanceReportPage() {
       { wch: 28 }, // Brigadier
       { wch: 14 }, // DNI
       { wch: 18 }, // Rol
+      { wch: 16 }, // Sección
       { wch: 15 }, // Tardanzas Mes
       { wch: 18 }, // Faltas Indum Mes
       ...dayHeaders.map(() => ({ wch: 8 })),
@@ -355,8 +393,8 @@ export default function AttendanceReportPage() {
       const ref = `${letters[c]}${headerRow}`;
 
       let fill = headerFill;
-      // Monthly stats headers are at index 3 and 4
-      if (c === 3 || c === 4) fill = monthlyStatsFill;
+      // Monthly stats headers are at index 4 and 5
+      if (c === 4 || c === 5) fill = monthlyStatsFill;
 
       applyStyle(ref, {
         font: { bold: true, color: { rgb: "1F2937" } },
@@ -368,8 +406,8 @@ export default function AttendanceReportPage() {
 
     // Data rows styles
     const startDataRow = headerRow + 1;
-    const monthlyStatsStartIndex = 3;
-    const daysStartIndex = 5;
+    const monthlyStatsStartIndex = 4;
+    const daysStartIndex = 6;
     const summaryStartIndex = daysStartIndex + dayHeaders.length;
 
     for (let r = startDataRow; r < aoa.length + 1; r++) {
@@ -377,7 +415,7 @@ export default function AttendanceReportPage() {
         const ref = `${letters[c]}${r}`;
         if (!ws[ref]) continue;
 
-        const isMonthlyStat = c === 3 || c === 4;
+        const isMonthlyStat = c === 4 || c === 5;
         const isSummaryCol = c >= summaryStartIndex;
 
         let fill = undefined;
@@ -386,7 +424,7 @@ export default function AttendanceReportPage() {
 
         applyStyle(ref, {
           alignment: {
-            horizontal: c < 3 ? "left" : "center",
+            horizontal: c < 4 ? "left" : "center",
             vertical: "center",
           },
           border: borderThin,
@@ -424,7 +462,7 @@ export default function AttendanceReportPage() {
             Reporte de Asistencia
           </h1>
           <p className="text-slate-500 mt-1">
-            Solo brigadieres de aula y patrulla
+            Registro de brigadieres de aula, patrulla y generales
           </p>
         </div>
 
@@ -446,7 +484,17 @@ export default function AttendanceReportPage() {
           </div>
 
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-1">
-            <button onClick={goPrev} className="p-1 hover:bg-slate-100 rounded">
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="px-2 py-1 text-sm font-medium text-slate-700 bg-transparent outline-none cursor-pointer border-r border-slate-200"
+            >
+              <option value="TODOS">Todos los roles</option>
+              <option value="BRIGADIER_AULA">Brigadieres de Aula</option>
+              <option value="BRIGADIER_PATRULLA">Brigadieres de Patrulla</option>
+              <option value="GENERALES">Brigadieres Generales</option>
+            </select>
+            <button onClick={goPrev} className="p-1 hover:bg-slate-100 rounded ml-1">
               <ChevronLeft className="w-5 h-5 text-slate-600" />
             </button>
             <span className="min-w-[140px] text-center font-medium text-slate-700 capitalize px-2">
@@ -532,17 +580,17 @@ export default function AttendanceReportPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.length === 0 ? (
+                {filteredUsers.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={daysInRange.length + 1}
+                      colSpan={daysInRange.length + 3}
                       className="p-8 text-center text-slate-500"
                     >
                       No hay brigadieres registrados.
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => (
+                  filteredUsers.map((user) => (
                     <tr
                       key={user.id}
                       className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
@@ -553,7 +601,10 @@ export default function AttendanceReportPage() {
                       >
                         {user.name}
                         <div className="text-[11px] font-normal text-slate-500 mt-0.5">
-                          {user.role}
+                          {user.role === "BRIGADIER_AULA" || user.role === "BRIGADIER_PATRULLA"
+                            ? user.role.replace("BRIGADIER_", "")
+                            : "GENERAL"}
+                          {user.grade && user.section ? ` - ${user.grade} ${user.section}` : ""}
                         </div>
                       </td>
                       <td className="p-2 text-center text-sm font-bold text-red-600 bg-amber-50/50 border-r border-slate-200">

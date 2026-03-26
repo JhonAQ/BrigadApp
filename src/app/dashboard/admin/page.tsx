@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import {
@@ -447,10 +448,12 @@ export default function AdminPage() {
       )}
 
       {/* MODAL CREAR / EDITAR */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+      {isModalOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2">
                 {isEditing ? (
                   <Edit2 className="w-5 h-5 text-indigo-500" />
@@ -637,7 +640,8 @@ export default function AdminPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

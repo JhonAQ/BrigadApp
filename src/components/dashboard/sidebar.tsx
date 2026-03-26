@@ -76,7 +76,6 @@ export function Sidebar() {
           icon: ShieldCheck,
           roles: [
             "BRIGADIER_GENERAL_PRINCIPAL",
-            "BRIGADIER_GENERAL_ALTERNO",
             "DOCENTE",
           ],
         },
@@ -102,7 +101,6 @@ export function Sidebar() {
           href: "/dashboard/attendance-report",
           icon: CalendarDays,
           roles: [
-            "BRIGADIER_GENERAL_ALTERNO",
             "BRIGADIER_GENERAL_PRINCIPAL",
             "DOCENTE",
           ],

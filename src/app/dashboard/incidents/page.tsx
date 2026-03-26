@@ -18,6 +18,7 @@ import {
   X,
   History,
   CheckCircle2,
+  Trash2,
 } from "lucide-react";
 import { MOCK_STUDENTS, Incident, getGrades, getSections } from "@/lib/mock";
 import { toast } from "sonner";
@@ -26,6 +27,8 @@ const HISTORY_ALLOWED_ROLES = [
   "COORDINADOR",
   "BRIGADIER_GENERAL_PRINCIPAL",
   "BRIGADIER_GENERAL_ALTERNO",
+  "BRIGADIER_AULA",
+  "BRIGADIER_PATRULLA",
   "DOCENTE",
   "DEVELOPER",
 ];
@@ -148,13 +151,25 @@ export default function IncidentsPage() {
               ? inc.reporter?.role === "BRIGADIER_AULA"
               : true;
 
+      // Role-based visibility logic
+      let matchesUserLevel = true;
+      if (
+        user?.role === "BRIGADIER_AULA" ||
+        user?.role === "BRIGADIER_PATRULLA" ||
+        user?.role === "BRIGADIER_GENERAL_ALTERNO"
+      ) {
+        // They can only see their own formulated incidents
+        matchesUserLevel = inc.reporter_id === user.id;
+      }
+
       return (
         matchesSearch &&
         matchesDate &&
         matchesStatus &&
         matchesType &&
         matchesGrade &&
-        matchesOrigin
+        matchesOrigin &&
+        matchesUserLevel
       );
     })
     .sort((a, b) => {
@@ -229,6 +244,20 @@ export default function IncidentsPage() {
       setStep(2);
     } catch (error: any) {
       toast.error("Error al crear alumno: " + error.message);
+    }
+  };
+
+  const handleDeleteIncident = async (id: number | string) => {
+    if (!confirm("¿Estás seguro de eliminar esta incidencia? Esta acción no se puede deshacer.")) return;
+
+    try {
+      const { error } = await supabase.from("incidents").delete().eq("id", id);
+      if (error) throw error;
+
+      setDbIncidents((prev) => prev.filter((inc) => inc.id !== id));
+      toast.success("Incidencia eliminada correctamente");
+    } catch (error: any) {
+      toast.error("Error al eliminar la incidencia: " + error.message);
     }
   };
 
@@ -470,9 +499,20 @@ export default function IncidentsPage() {
                         </p>
                       </div>
                     </div>
-                    <span className="text-xs font-bold px-2 py-1 bg-slate-100 rounded text-slate-600">
-                      {inc.type}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold px-2 py-1 bg-slate-100 rounded text-slate-600">
+                        {inc.type}
+                      </span>
+                      {["DEVELOPER", "COORDINADOR", "BRIGADIER_GENERAL_PRINCIPAL", "BRIGADIER_GENERAL_ALTERNO"].includes(user?.role || "") && (
+                        <button
+                          onClick={() => handleDeleteIncident(inc.id)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-md transition-colors"
+                          title="Eliminar incidencia"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="pl-5">

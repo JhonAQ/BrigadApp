@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { Plus, Trash2, Edit2 } from "lucide-react";
@@ -166,9 +167,11 @@ export default function SectionsPage() {
         </table>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+      {showModal &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">
               {editingId ? "Editar Sección" : "Nueva Sección"}
             </h2>
@@ -232,7 +235,8 @@ export default function SectionsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

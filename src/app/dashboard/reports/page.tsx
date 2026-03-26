@@ -70,8 +70,7 @@ export default function ReportsPresentationArgsPage() {
         <p>Puntualidad: {data.punctuality}%</p>
         <p>Uniforme completo: {data.uniform}%</p>
         <p>
-          Eficacia incidentes: {data.incidentEffectiveness}% ({data.resolved}/
-          {data.incidents})
+          Pts. Incidentes: {data.incidentsScore}% ({data.incidents} reportados)
         </p>
       </div>
     );
@@ -95,7 +94,7 @@ export default function ReportsPresentationArgsPage() {
       const prevFirstDay = startOfMonth(subMonths(now, 1)).toISOString();
       const prevLastDay = endOfMonth(subMonths(now, 1)).toISOString();
 
-      const [currentIncidentsRes, prevIncidentsRes, attendanceRes] =
+      const [currentIncidentsRes, prevIncidentsRes, attendanceRes, usersRes] =
         await Promise.all([
           supabase
             .from("incidents")
@@ -118,6 +117,15 @@ export default function ReportsPresentationArgsPage() {
             )
             .gte("date", firstDay.split("T")[0])
             .lte("date", lastDay.split("T")[0]),
+          supabase
+            .from("users")
+            .select("id, name, role")
+            .in("role", [
+              "BRIGADIER_AULA",
+              "BRIGADIER_PATRULLA",
+              "BRIGADIER_GENERAL_PRINCIPAL",
+              "BRIGADIER_GENERAL_ALTERNO",
+            ]),
         ]);
 
       if (currentIncidentsRes.data) {
@@ -125,6 +133,7 @@ export default function ReportsPresentationArgsPage() {
           currentIncidentsRes.data,
           prevIncidentsRes.data || [],
           attendanceRes.data || [],
+          usersRes.data || [],
         );
       }
     } catch (error) {
@@ -134,7 +143,7 @@ export default function ReportsPresentationArgsPage() {
     }
   };
 
-  const processData = (current: any[], prev: any[], attendance: any[]) => {
+  const processData = (current: any[], prev: any[], attendance: any[], users: any[]) => {
     // 1. KPIs Básicos
     const totalCurrent = current.length;
     const totalPrev = prev.length;
@@ -190,9 +199,28 @@ export default function ReportsPresentationArgsPage() {
       .slice(0, 5);
 
     // 5. Ranking de Brigadieres (puntualidad + uniforme + incidentes)
-    const brigadierRoles = ["BRIGADIER_AULA", "BRIGADIER_PATRULLA"];
+    const brigadierRoles = [
+      "BRIGADIER_AULA",
+      "BRIGADIER_PATRULLA",
+      "BRIGADIER_GENERAL_PRINCIPAL",
+      "BRIGADIER_GENERAL_ALTERNO",
+    ];
 
     const brigadierMap: Record<string, any> = {};
+
+    // Initialize all eligible brigadiers so they appear in ranking even with 0 registers
+    users.forEach((u: any) => {
+      brigadierMap[u.id] = {
+        id: u.id,
+        name: u.name || "Desconocido",
+        role: u.role || "",
+        attendance: 0,
+        onTime: 0,
+        uniformOk: 0,
+        incidentsReported: 0,
+        incidentsResolved: 0,
+      };
+    });
 
     const ensureBrigadier = (id: string, name: string, role?: string) => {
       if (!brigadierMap[id]) {
@@ -235,43 +263,46 @@ export default function ReportsPresentationArgsPage() {
       }
     });
 
+    const MAX_INCIDENTS_CAP = 5;
+
     const brigadierList = Object.values(brigadierMap).map((b: any) => {
       const punctuality =
         b.attendance > 0 ? (b.onTime / b.attendance) * 100 : 0;
       const uniformRate =
         b.attendance > 0 ? (b.uniformOk / b.attendance) * 100 : 0;
-      const incidentEffectiveness =
-        b.incidentsReported > 0
-          ? (b.incidentsResolved / b.incidentsReported) * 100
-          : 0;
+      
+      const cappedIncidents = Math.min(b.incidentsReported, MAX_INCIDENTS_CAP);
+      const incidentsScore = (cappedIncidents / MAX_INCIDENTS_CAP) * 100;
+
       const score = Math.round(
-        punctuality * 0.4 + uniformRate * 0.3 + incidentEffectiveness * 0.3,
+        punctuality * 0.4 + uniformRate * 0.3 + incidentsScore * 0.3,
       );
 
       return {
         ...b,
         punctuality,
         uniformRate,
-        incidentEffectiveness,
+        incidentsScore,
         score,
       };
     });
 
-    const topBrigadiers = brigadierList
-      .sort(
-        (a: any, b: any) =>
-          b.score - a.score || b.incidentsResolved - a.incidentsResolved,
-      )
-      .slice(0, 3)
-      .map((b: any) => ({
-        name: b.name,
-        Score: b.score,
-        punctuality: Math.round(b.punctuality),
-        uniform: Math.round(b.uniformRate),
-        incidents: b.incidentsReported,
-        resolved: b.incidentsResolved,
-        incidentEffectiveness: Math.round(b.incidentEffectiveness),
-      }));
+    const sortedBrigadierList = brigadierList.sort(
+      (a: any, b: any) =>
+        b.score - a.score || b.incidentsReported - a.incidentsReported,
+    );
+
+    const fullRanking = sortedBrigadierList.map((b: any) => ({
+      name: b.name,
+      Score: b.score,
+      punctuality: Math.round(b.punctuality),
+      uniform: Math.round(b.uniformRate),
+      incidents: b.incidentsReported,
+      resolved: b.incidentsResolved,
+      incidentsScore: Math.round(b.incidentsScore),
+    }));
+
+    const topBrigadiers = fullRanking.slice(0, 3);
 
     const avgPunctuality =
       brigadierList.length > 0
@@ -291,11 +322,11 @@ export default function ReportsPresentationArgsPage() {
             ) / brigadierList.length,
           )
         : 0;
-    const avgIncidentEffectiveness =
+    const avgIncidentsScore =
       brigadierList.length > 0
         ? Math.round(
             brigadierList.reduce(
-              (sum: number, b: any) => sum + b.incidentEffectiveness,
+              (sum: number, b: any) => sum + b.incidentsScore,
               0,
             ) / brigadierList.length,
           )
@@ -322,10 +353,11 @@ export default function ReportsPresentationArgsPage() {
       gradeChartData,
       topStudents,
       topBrigadiers,
+      fullRanking,
       brigadierAverages: {
         avgPunctuality,
         avgUniform,
-        avgIncidentEffectiveness,
+        avgIncidentsScore,
         totalIncidentsManaged,
         totalIncidentsResolved,
       },
@@ -594,8 +626,8 @@ export default function ReportsPresentationArgsPage() {
             Patrullaje
           </h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
-            <div className="bg-amber-50 rounded-3xl p-8 border border-amber-200 flex flex-col justify-between">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
+            <div className="lg:col-span-3 bg-amber-50 rounded-3xl p-8 border border-amber-200 flex flex-col justify-between overflow-y-auto">
               <div>
                 <div className="flex items-center gap-3 mb-4">
                   <Award className="w-12 h-12 text-amber-400" />
@@ -610,27 +642,19 @@ export default function ReportsPresentationArgsPage() {
                 </div>
                 <p className="text-amber-800/90 font-medium mb-4">
                   Ordenados por puntaje ponderado: 40% puntualidad, 30% uniforme
-                  completo, 30% eficacia en incidentes.
+                  completo, 30% nivel de reportes.
                 </p>
                 <ul className="text-sm text-amber-900/80 space-y-2 font-semibold">
                   <li>
-                    Asistencia considerada:{" "}
-                    {stats.brigadierAverages.totalIncidentsManaged} incidentes
-                    gestionados en el mes.
+                    Total de incidentes gestionados por el escuadrón:{" "}
+                    <strong>{stats.brigadierAverages.totalIncidentsManaged}</strong> en el mes.
                   </li>
                   <li>
                     Promedios del grupo: puntualidad{" "}
                     {stats.brigadierAverages.avgPunctuality}% · uniforme{" "}
-                    {stats.brigadierAverages.avgUniform}% · eficacia{" "}
-                    {stats.brigadierAverages.avgIncidentEffectiveness}%.
+                    {stats.brigadierAverages.avgUniform}% · puntaje de incidentes{" "}
+                    {stats.brigadierAverages.avgIncidentsScore}%.
                   </li>
-                  {stats.topBrigadiers.length < 3 ? (
-                    <li className="text-amber-700 font-bold">
-                      Solo hay {stats.topBrigadiers.length} brigadiere(s) con
-                      asistencia/reportes registrados este mes; registra al
-                      resto para completar el top 3.
-                    </li>
-                  ) : null}
                 </ul>
               </div>
               <p className="text-xs text-amber-700/70 mt-6">
@@ -638,70 +662,109 @@ export default function ReportsPresentationArgsPage() {
               </p>
             </div>
 
-            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg flex flex-col">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 items-end">
-                {stats.topBrigadiers.map((b: any, idx: number) => {
-                  const barHeight = 120 + (b.Score / maxScore) * 140;
-                  const medalColor =
-                    ["bg-amber-400", "bg-slate-300", "bg-amber-700"][idx] ||
-                    "bg-slate-200";
-                  const placeLabel =
-                    ["1er", "2do", "3er"][idx] || `${idx + 1}°`;
+            <div className={`bg-white rounded-3xl p-8 border border-slate-200 shadow-lg flex flex-col min-h-[300px] h-full ${stats.fullRanking.length > 3 ? "lg:col-span-6" : "lg:col-span-9"}`}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 items-end">
+                  {stats.topBrigadiers.map((b: any, idx: number) => {
+                    const barHeight = 120 + (b.Score / maxScore) * 140;
+                    const medalColor =
+                      ["bg-amber-400", "bg-slate-300", "bg-amber-700"][idx] ||
+                      "bg-slate-200";
+                    const placeLabel =
+                      ["1er", "2do", "3er"][idx] || `${idx + 1}°`;
 
-                  return (
-                    <div
-                      key={b.name + idx}
-                      className="flex flex-col items-center justify-end gap-3 h-full"
-                    >
+                    return (
                       <div
-                        className="w-full rounded-2xl bg-gradient-to-t from-amber-50 to-white border border-slate-100 shadow-inner px-3 pt-4 pb-3 flex flex-col items-center gap-2"
-                        style={{ minHeight: barHeight }}
+                        key={b.name + idx}
+                        className="flex flex-col items-center justify-end gap-3 h-full"
                       >
                         <div
-                          className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest text-amber-950 ${medalColor}`}
+                          className="w-full rounded-2xl bg-gradient-to-t from-amber-50 to-white border border-slate-100 shadow-inner px-3 pt-4 pb-3 flex flex-col items-center gap-2"
+                          style={{ minHeight: barHeight }}
                         >
-                          {placeLabel}
-                        </div>
-                        <p className="text-center text-base font-black text-slate-800 leading-tight">
-                          {b.name}
-                        </p>
-                        <p className="text-4xl font-black text-amber-600">
-                          {b.Score}
-                        </p>
-                        <p className="text-xs font-semibold text-slate-500">
-                          Puntaje ponderado
-                        </p>
-                        <div className="w-full text-xs text-slate-600 space-y-1">
-                          <div className="flex justify-between">
-                            <span>Puntualidad</span>
-                            <span>{b.punctuality}%</span>
+                          <div
+                            className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest text-amber-950 ${medalColor}`}
+                          >
+                            {placeLabel}
                           </div>
-                          <div className="flex justify-between">
-                            <span>Uniforme</span>
-                            <span>{b.uniform}%</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Eficacia</span>
-                            <span>{b.incidentEffectiveness}%</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Incidentes</span>
-                            <span>
-                              {b.resolved}/{b.incidents}
-                            </span>
+                          <p className="text-center text-base font-black text-slate-800 leading-tight">
+                            {b.name}
+                          </p>
+                          <p className="text-4xl font-black text-amber-600">
+                            {b.Score}
+                          </p>
+                          <p className="text-xs font-semibold text-slate-500">
+                            Puntaje ponderado
+                          </p>
+                          <div className="w-full text-xs text-slate-600 space-y-1">
+                            <div className="flex justify-between">
+                              <span>Puntualidad</span>
+                              <span>{b.punctuality}%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Uniforme</span>
+                              <span>{b.uniform}%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Pts. Incidentes</span>
+                              <span>{b.incidentsScore}%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Reportados</span>
+                              <span>
+                                {b.incidents}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {stats.topBrigadiers.length === 0 ? (
-                <div className="text-center text-slate-500 font-semibold py-10">
-                  Aún no hay datos de brigadieres este mes.
+                    );
+                  })}
                 </div>
-              ) : null}
-            </div>
+                {stats.topBrigadiers.length === 0 ? (
+                  <div className="text-center text-slate-500 font-semibold py-10">
+                    Aún no hay datos de brigadieres este mes.
+                  </div>
+                ) : null}
+              </div>
+
+              {/* LISTA DE LOS DE MAS BRIGADIERES RANKING COMPLETO */}
+              {stats.fullRanking.length > 3 && (
+                <div className="lg:col-span-3 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm overflow-y-auto h-[300px] lg:h-full [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  <h4 className="text-sm font-bold text-slate-800 mb-4 sticky top-0 bg-white z-10 pb-2 border-b">
+                    Resto del Escuadrón (Ranking General)
+                  </h4>
+                  <div className="space-y-2">
+                    {stats.fullRanking.slice(3).map((b: any, idx: number) => (
+                      <div
+                        key={b.name + idx}
+                        className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 flex items-center justify-center bg-slate-100 rounded-full text-xs font-bold text-slate-500">
+                            {idx + 4}
+                          </span>
+                          <div>
+                            <p className="text-sm font-bold text-slate-700">
+                              {b.name}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              Puntualidad: {b.punctuality}% · Uniforme: {b.uniform}% · Rep: {b.incidents}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-lg font-black text-slate-700">
+                            {b.Score}
+                          </span>
+                          <span className="text-[10px] block text-slate-400 font-medium -mt-1">
+                            Puntos
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
           </div>
         </div>
       );

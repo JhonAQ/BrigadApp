@@ -28,7 +28,7 @@ export default function ElevatedIncidentsPage() {
   const [rejectReason, setRejectReason] = useState("");
 
   const authorizedRoles = [
-    "COORDINADOR",
+    "DOCENTE",
     "BRIGADIER_GENERAL_PRINCIPAL",
     "DEVELOPER",
     "PSYCHOLOGIST",
