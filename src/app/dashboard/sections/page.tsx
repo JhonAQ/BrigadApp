@@ -172,72 +172,77 @@ export default function SectionsPage() {
         createPortal(
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">
-              {editingId ? "Editar Sección" : "Nueva Sección"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4 text-slate-900">
-              <div>
-                <label className="block text-sm font-medium mb-1">Grado</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="Ej: 1er Año"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.grade}
-                  onChange={(e) =>
-                    setFormData({ ...formData, grade: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Sección / Nombre
-                </label>
-                <input
-                  required
-                  type="text"
-                  placeholder="Ej: A"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Capacidad Típica
-                </label>
-                <input
-                  type="number"
-                  className="w-full p-2 border rounded-md"
-                  value={formData.capacity}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      capacity: parseInt(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <Button
-                  variant="ghost"
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setEditingId(null);
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">Guardar</Button>
-              </div>
-            </form>
-          </div>
-        </div>,
-        document.body
-      )}
+              <h2 className="text-xl font-bold mb-4">
+                {editingId ? "Editar Sección" : "Nueva Sección"}
+              </h2>
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-4 text-slate-900"
+              >
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Grado
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="Ej: 1er Año"
+                    className="w-full p-2 border rounded-md"
+                    value={formData.grade}
+                    onChange={(e) =>
+                      setFormData({ ...formData, grade: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Sección / Nombre
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="Ej: A"
+                    className="w-full p-2 border rounded-md"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Capacidad Típica
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full p-2 border rounded-md"
+                    value={formData.capacity}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        capacity: parseInt(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex justify-end space-x-3 pt-4 border-t">
+                  <Button
+                    variant="ghost"
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      setEditingId(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit">Guardar</Button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

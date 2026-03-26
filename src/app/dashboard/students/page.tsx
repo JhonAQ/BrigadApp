@@ -206,117 +206,120 @@ export default function StudentsPage() {
         createPortal(
           <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
-            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 text-indigo-600" />
-                Registrar Nuevo Alumno
-              </h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Nombres
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Juan Carlos"
-                    value={newStudent.first_name}
-                    onChange={(e) =>
-                      setNewStudent({
-                        ...newStudent,
-                        first_name: e.target.value,
-                      })
-                    }
-                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Apellidos
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Pérez Gómez"
-                    value={newStudent.last_name}
-                    onChange={(e) =>
-                      setNewStudent({
-                        ...newStudent,
-                        last_name: e.target.value,
-                      })
-                    }
-                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-white"
-                  />
-                </div>
+              <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-indigo-600" />
+                  Registrar Nuevo Alumno
+                </h2>
               </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                      Nombres
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Juan Carlos"
+                      value={newStudent.first_name}
+                      onChange={(e) =>
+                        setNewStudent({
+                          ...newStudent,
+                          first_name: e.target.value,
+                        })
+                      }
+                      className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                      Apellidos
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Pérez Gómez"
+                      value={newStudent.last_name}
+                      onChange={(e) =>
+                        setNewStudent({
+                          ...newStudent,
+                          last_name: e.target.value,
+                        })
+                      }
+                      className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-white"
+                    />
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Grado
-                  </label>
-                  <select
-                    value={newStudent.grade}
-                    onChange={(e) => {
-                      const newGrade = e.target.value;
-                      const newSections = dbSections
-                        .filter((s) => s.grade === newGrade)
-                        .map((s) => s.name);
-                      setNewStudent({
-                        ...newStudent,
-                        grade: newGrade,
-                        section: newSections[0] || "",
-                      });
-                    }}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-white font-medium"
-                  >
-                    {availableGrades.map((g) => (
-                      <option key={g as string} value={g as string}>
-                        {g as string}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Sección
-                  </label>
-                  <select
-                    value={newStudent.section}
-                    onChange={(e) =>
-                      setNewStudent({ ...newStudent, section: e.target.value })
-                    }
-                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-white font-medium"
-                  >
-                    {availableSections.map((s, i) => (
-                      <option key={i} value={s as string}>
-                        {s as string}
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                      Grado
+                    </label>
+                    <select
+                      value={newStudent.grade}
+                      onChange={(e) => {
+                        const newGrade = e.target.value;
+                        const newSections = dbSections
+                          .filter((s) => s.grade === newGrade)
+                          .map((s) => s.name);
+                        setNewStudent({
+                          ...newStudent,
+                          grade: newGrade,
+                          section: newSections[0] || "",
+                        });
+                      }}
+                      className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-white font-medium"
+                    >
+                      {availableGrades.map((g) => (
+                        <option key={g as string} value={g as string}>
+                          {g as string}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                      Sección
+                    </label>
+                    <select
+                      value={newStudent.section}
+                      onChange={(e) =>
+                        setNewStudent({
+                          ...newStudent,
+                          section: e.target.value,
+                        })
+                      }
+                      className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-slate-900 bg-white font-medium"
+                    >
+                      {availableSections.map((s, i) => (
+                        <option key={i} value={s as string}>
+                          {s as string}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
+              <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
+                <Button
+                  onClick={() => setShowAddModal(false)}
+                  variant="secondary"
+                  className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg font-medium"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={addStudent}
+                  variant="primary"
+                  className="px-5 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium shadow-sm"
+                >
+                  Guardar Alumno
+                </Button>
+              </div>
             </div>
-            <div className="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50">
-              <Button
-                onClick={() => setShowAddModal(false)}
-                variant="secondary"
-                className="px-5 py-2.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg font-medium"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={addStudent}
-                variant="primary"
-                className="px-5 py-2.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg font-medium shadow-sm"
-              >
-                Guardar Alumno
-              </Button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

@@ -454,195 +454,195 @@ export default function AdminPage() {
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
               <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-              <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                {isEditing ? (
-                  <Edit2 className="w-5 h-5 text-indigo-500" />
-                ) : (
-                  <Plus className="w-5 h-5 text-indigo-500" />
-                )}
-                {isEditing ? "Editar Usuario" : "Nuevo Usuario"}
-              </h2>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 bg-slate-200/50 hover:bg-slate-200 p-1.5 rounded-full transition-colors"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2">
+                  {isEditing ? (
+                    <Edit2 className="w-5 h-5 text-indigo-500" />
+                  ) : (
+                    <Plus className="w-5 h-5 text-indigo-500" />
+                  )}
+                  {isEditing ? "Editar Usuario" : "Nuevo Usuario"}
+                </h2>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 bg-slate-200/50 hover:bg-slate-200 p-1.5 rounded-full transition-colors"
                 >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
-              </button>
-            </div>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                </button>
+              </div>
 
-            <div className="p-6 space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Key className="w-3 h-3" /> Documento ID / Correo / Usuario
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all disabled:opacity-50"
-                  placeholder="Ej. 70123456 o usuario@escuela.edu"
-                  value={formData.dni}
-                  disabled={isEditing}
-                  onChange={(e) =>
-                    setFormData({ ...formData, dni: e.target.value })
-                  }
-                />
-                {isEditing && (
-                  <p className="text-[10px] text-slate-400">
-                    El ID de acceso no se puede modificar.
+              <div className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Key className="w-3 h-3" /> Documento ID / Correo / Usuario
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all disabled:opacity-50"
+                    placeholder="Ej. 70123456 o usuario@escuela.edu"
+                    value={formData.dni}
+                    disabled={isEditing}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dni: e.target.value })
+                    }
+                  />
+                  {isEditing && (
+                    <p className="text-[10px] text-slate-400">
+                      El ID de acceso no se puede modificar.
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Key className="w-3 h-3" /> Contraseña
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    placeholder="Ej. asdflkjasdflkj"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                  />
+                  <p className="text-[10px] text-slate-500">
+                    Por defecto se genera automática de 6 dígitos al crear.
                   </p>
-                )}
-              </div>
+                </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Key className="w-3 h-3" /> Contraseña
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                  placeholder="Ej. asdflkjasdflkj"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                />
-                <p className="text-[10px] text-slate-500">
-                  Por defecto se genera automática de 6 dígitos al crear.
-                </p>
-              </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <User className="w-3 h-3" /> Nombres Completos
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    placeholder="Nombres y Apellidos"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                  />
+                </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <User className="w-3 h-3" /> Nombres Completos
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                  placeholder="Nombres y Apellidos"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                />
-              </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <Shield className="w-3 h-3" /> Rol del Usuario
+                  </label>
+                  <select
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium text-slate-700"
+                    value={formData.role}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        role: e.target.value,
+                        grade: "",
+                        section: "",
+                      })
+                    }
+                  >
+                    <optgroup label="Administrativos">
+                      <option value="DOCENTE">Docente / Coordinador</option>
+                      <option value="PSYCHOLOGIST">Psicología</option>
+                      <option value="BRIGADIER_GENERAL_PRINCIPAL">
+                        Brigadier General Principal
+                      </option>
+                      <option value="BRIGADIER_GENERAL_ALTERNO">
+                        Brigadier General Alterno
+                      </option>
+                    </optgroup>
+                    <optgroup label="Operativos">
+                      <option value="BRIGADIER_PATRULLA">
+                        Brigadier de Patrulla
+                      </option>
+                      <option value="BRIGADIER_AULA">Brigadier de Aula</option>
+                    </optgroup>
+                  </select>
+                </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                  <Shield className="w-3 h-3" /> Rol del Usuario
-                </label>
-                <select
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium text-slate-700"
-                  value={formData.role}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      role: e.target.value,
-                      grade: "",
-                      section: "",
-                    })
-                  }
-                >
-                  <optgroup label="Administrativos">
-                    <option value="DOCENTE">Docente / Coordinador</option>
-                    <option value="PSYCHOLOGIST">Psicología</option>
-                    <option value="BRIGADIER_GENERAL_PRINCIPAL">
-                      Brigadier General Principal
-                    </option>
-                    <option value="BRIGADIER_GENERAL_ALTERNO">
-                      Brigadier General Alterno
-                    </option>
-                  </optgroup>
-                  <optgroup label="Operativos">
-                    <option value="BRIGADIER_PATRULLA">
-                      Brigadier de Patrulla
-                    </option>
-                    <option value="BRIGADIER_AULA">Brigadier de Aula</option>
-                  </optgroup>
-                </select>
-              </div>
-
-              {requiresClassroom && (
-                <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                      <LayoutGrid className="w-3 h-3" /> Grado
-                    </label>
-                    <select
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                      value={formData.grade}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          grade: e.target.value,
-                          section: "",
-                        })
-                      }
-                    >
-                      <option value="">Elegir grado...</option>
-                      {availableGrades.map((g) => (
-                        <option key={g} value={g}>
-                          {g}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-700">
-                      Sección
-                    </label>
-                    <select
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:opacity-50"
-                      value={formData.section}
-                      onChange={(e) =>
-                        setFormData({ ...formData, section: e.target.value })
-                      }
-                      disabled={!formData.grade}
-                    >
-                      <option value="">Elegir sección...</option>
-                      {dbSections
-                        .filter((s) => s.grade === formData.grade)
-                        .map((s) => (
-                          <option key={s.id} value={s.name}>
-                            {s.name}
+                {requiresClassroom && (
+                  <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                        <LayoutGrid className="w-3 h-3" /> Grado
+                      </label>
+                      <select
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        value={formData.grade}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            grade: e.target.value,
+                            section: "",
+                          })
+                        }
+                      >
+                        <option value="">Elegir grado...</option>
+                        {availableGrades.map((g) => (
+                          <option key={g} value={g}>
+                            {g}
                           </option>
                         ))}
-                    </select>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-slate-700">
+                        Sección
+                      </label>
+                      <select
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 disabled:opacity-50"
+                        value={formData.section}
+                        onChange={(e) =>
+                          setFormData({ ...formData, section: e.target.value })
+                        }
+                        disabled={!formData.grade}
+                      >
+                        <option value="">Elegir sección...</option>
+                        {dbSections
+                          .filter((s) => s.grade === formData.grade)
+                          .map((s) => (
+                            <option key={s.id} value={s.name}>
+                              {s.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            <div className="p-5 border-t border-slate-100 bg-slate-50 flex gap-3 justify-end">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 bg-slate-200/50 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveUser}
-                className="px-4 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow flex items-center gap-2 transition-transform active:scale-95"
-              >
-                <CheckCircle2 className="w-4 h-4" />{" "}
-                {isEditing ? "Guardar Cambios" : "Registrar"}
-              </button>
+              <div className="p-5 border-t border-slate-100 bg-slate-50 flex gap-3 justify-end">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 bg-slate-200/50 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveUser}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow flex items-center gap-2 transition-transform active:scale-95"
+                >
+                  <CheckCircle2 className="w-4 h-4" />{" "}
+                  {isEditing ? "Guardar Cambios" : "Registrar"}
+                </button>
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

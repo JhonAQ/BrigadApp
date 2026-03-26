@@ -175,21 +175,23 @@ export default function AttendanceReportPage() {
   const filteredUsers = useMemo(() => {
     if (roleFilter === "TODOS") return users;
     if (roleFilter === "GENERALES") {
-      return users.filter(u => u.role.includes("GENERAL"));
+      return users.filter((u) => u.role.includes("GENERAL"));
     }
     return users.filter((u) => u.role === roleFilter);
   }, [users, roleFilter]);
 
   const filteredAttendances = useMemo(() => {
-    const userIds = new Set(filteredUsers.map(u => u.id));
-    return attendances.filter(a => userIds.has(a.user_id));
+    const userIds = new Set(filteredUsers.map((u) => u.id));
+    return attendances.filter((a) => userIds.has(a.user_id));
   }, [attendances, filteredUsers]);
 
   const stats = useMemo(() => {
     const total = filteredAttendances.length;
     const punctual = filteredAttendances.filter((a) => a.on_time).length;
     const late = total - punctual;
-    const uniformOk = filteredAttendances.filter((a) => a.uniform_complete).length;
+    const uniformOk = filteredAttendances.filter(
+      (a) => a.uniform_complete,
+    ).length;
     return { total, punctual, late, uniformOk };
   }, [filteredAttendances]);
 
@@ -491,10 +493,15 @@ export default function AttendanceReportPage() {
             >
               <option value="TODOS">Todos los roles</option>
               <option value="BRIGADIER_AULA">Brigadieres de Aula</option>
-              <option value="BRIGADIER_PATRULLA">Brigadieres de Patrulla</option>
+              <option value="BRIGADIER_PATRULLA">
+                Brigadieres de Patrulla
+              </option>
               <option value="GENERALES">Brigadieres Generales</option>
             </select>
-            <button onClick={goPrev} className="p-1 hover:bg-slate-100 rounded ml-1">
+            <button
+              onClick={goPrev}
+              className="p-1 hover:bg-slate-100 rounded ml-1"
+            >
               <ChevronLeft className="w-5 h-5 text-slate-600" />
             </button>
             <span className="min-w-[140px] text-center font-medium text-slate-700 capitalize px-2">
@@ -601,10 +608,13 @@ export default function AttendanceReportPage() {
                       >
                         {user.name}
                         <div className="text-[11px] font-normal text-slate-500 mt-0.5">
-                          {user.role === "BRIGADIER_AULA" || user.role === "BRIGADIER_PATRULLA"
+                          {user.role === "BRIGADIER_AULA" ||
+                          user.role === "BRIGADIER_PATRULLA"
                             ? user.role.replace("BRIGADIER_", "")
                             : "GENERAL"}
-                          {user.grade && user.section ? ` - ${user.grade} ${user.section}` : ""}
+                          {user.grade && user.section
+                            ? ` - ${user.grade} ${user.section}`
+                            : ""}
                         </div>
                       </td>
                       <td className="p-2 text-center text-sm font-bold text-red-600 bg-amber-50/50 border-r border-slate-200">

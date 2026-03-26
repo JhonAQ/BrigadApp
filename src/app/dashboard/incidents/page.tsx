@@ -248,7 +248,12 @@ export default function IncidentsPage() {
   };
 
   const handleDeleteIncident = async (id: number | string) => {
-    if (!confirm("¿Estás seguro de eliminar esta incidencia? Esta acción no se puede deshacer.")) return;
+    if (
+      !confirm(
+        "¿Estás seguro de eliminar esta incidencia? Esta acción no se puede deshacer.",
+      )
+    )
+      return;
 
     try {
       const { error } = await supabase.from("incidents").delete().eq("id", id);
@@ -503,7 +508,12 @@ export default function IncidentsPage() {
                       <span className="text-xs font-bold px-2 py-1 bg-slate-100 rounded text-slate-600">
                         {inc.type}
                       </span>
-                      {["DEVELOPER", "COORDINADOR", "BRIGADIER_GENERAL_PRINCIPAL", "BRIGADIER_GENERAL_ALTERNO"].includes(user?.role || "") && (
+                      {[
+                        "DEVELOPER",
+                        "COORDINADOR",
+                        "BRIGADIER_GENERAL_PRINCIPAL",
+                        "BRIGADIER_GENERAL_ALTERNO",
+                      ].includes(user?.role || "") && (
                         <button
                           onClick={() => handleDeleteIncident(inc.id)}
                           className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-md transition-colors"

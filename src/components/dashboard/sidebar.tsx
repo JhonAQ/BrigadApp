@@ -74,10 +74,7 @@ export function Sidebar() {
           title: "Elevaciones",
           href: "/dashboard/elevated",
           icon: ShieldCheck,
-          roles: [
-            "BRIGADIER_GENERAL_PRINCIPAL",
-            "DOCENTE",
-          ],
+          roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"],
         },
         {
           title: "Psicología",
@@ -100,10 +97,7 @@ export function Sidebar() {
           title: "Reporte Asistencias",
           href: "/dashboard/attendance-report",
           icon: CalendarDays,
-          roles: [
-            "BRIGADIER_GENERAL_PRINCIPAL",
-            "DOCENTE",
-          ],
+          roles: ["BRIGADIER_GENERAL_PRINCIPAL", "DOCENTE"],
         },
         {
           title: "Reportes Visulaes",
